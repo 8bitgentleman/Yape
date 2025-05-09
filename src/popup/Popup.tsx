@@ -47,7 +47,13 @@ const Popup: React.FC = () => {
     const initializePopup = async () => {
       try {
         // Get state from storage
+        console.log('[DEBUG] Loading state from storage...');
         const loadedState = await loadState();
+        console.log('[DEBUG] Loaded state:', JSON.stringify(loadedState, (key, value) => {
+          // Hide password in logs
+          if (key === 'password') return '*****';
+          return value;
+        }, 2));
         setState(loadedState);
 
         // Get current active tab URL immediately to improve perceived performance
@@ -56,6 +62,37 @@ const Popup: React.FC = () => {
             setCurrentUrl(tabs[0].url);
           }
         });
+
+        // Check if there's a pending refresh with details (from background context menu)
+        const storageData = await chrome.storage.local.get(['pendingRefresh', 'lastAddedPackage']);
+        if (storageData.pendingRefresh) {
+          console.log('Found pending refresh flag, retrieving last added package info...');
+          
+          // Clear the flags
+          await chrome.storage.local.remove(['pendingRefresh', 'lastAddedPackage']);
+          
+          // If we have package details, log them for debugging
+          if (storageData.lastAddedPackage) {
+            console.log('Last added package details:', storageData.lastAddedPackage);
+            
+            // Check how old the package info is
+            const now = Date.now();
+            const packageTime = storageData.lastAddedPackage.timestamp || 0;
+            const timeDiff = now - packageTime;
+            
+            // If package was added within the last 5 minutes, show a notification
+            if (timeDiff < 5 * 60 * 1000) {
+              chrome.notifications.create('', {
+                type: 'basic',
+                title: 'Download Added',
+                message: `"${storageData.lastAddedPackage.name}" has been added to PyLoad.`,
+                iconUrl: './images/icon_128.png',
+              });
+            }
+          }
+          
+          // Will refresh when state is set and useEffect([state]) runs
+        }
 
         // Show content early even if not logged in
         setLoading(false);
@@ -93,9 +130,14 @@ const Popup: React.FC = () => {
   // Effect to refresh data when state changes
   useEffect(() => {
     if (state && state.isLoggedIn) {
+      console.log('[DEBUG] State changed and user is logged in, refreshing data...');
       refreshDataImmediate();
+    } else if (state) {
+      console.log('[DEBUG] State changed but user is not logged in');
+    } else {
+      console.log('[DEBUG] State is null, cannot refresh data');
     }
-  }, [state]);
+  }, [state, refreshDataImmediate]);
 
   /**
    * Open options page

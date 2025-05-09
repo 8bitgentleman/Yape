@@ -23,6 +23,22 @@ const DownloadList: React.FC<DownloadListProps> = ({
   showCompleted,
   isLoading = false
 }) => {
+  // Log properties for debugging
+  console.log('[DEBUG] DownloadList Props:', {
+    activeTasks: activeTasks.length,
+    completedTasks: completedTasks.length,
+    showCompleted,
+    isLoading
+  });
+  
+  if (activeTasks.length > 0) {
+    console.log('[DEBUG] First active task:', activeTasks[0]);
+  }
+  
+  if (completedTasks.length > 0 && showCompleted) {
+    console.log('[DEBUG] First completed task:', completedTasks[0]);
+  }
+  
   const totalTasks = activeTasks.length + (showCompleted ? completedTasks.length : 0);
   
   return (
@@ -37,7 +53,7 @@ const DownloadList: React.FC<DownloadListProps> = ({
       {!isLoading && totalTasks === 0 ? (
         <div className="empty-state">
           <i className="fas fa-download empty-icon"></i>
-          <div>No download tasks.</div>
+          <div>No download tasks. Use the '+' button to add downloads.</div>
         </div>
       ) : (
         <>

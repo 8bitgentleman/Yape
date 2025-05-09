@@ -9,7 +9,7 @@ You are helping with the modernization of Yape (Yet Another PyLoad Extension), a
 The modernized codebase is structured in the following way:
 
 ```
-/Users/mtvogel/Documents/Github-Repos/Yape/yape-modern/
+/Users/mtvogel/Documents/Github-Repos/Yape/
 ├── src/
 │   ├── background/        # Background script
 │   │   └── index.ts       # Main background script
@@ -148,41 +148,8 @@ Recent improvements to the extension include:
 
 ## Current Status and Challenges
 
-The extension is currently functional with basic download management features. Users can view active and completed downloads, add new downloads via the UI or right-click menu, and view download status in a clean, modern interface.
+The extension is currently functional with basic download management features. Users can add new downloads via the UI or right-click menu, and the ui has a clean, modern interface.
 
-### Remaining Challenges
-
-1. **PyLoad API Compatibility**:
-   - Different PyLoad versions return slightly different response formats
-   - Some PyLoad APIs may have undocumented behavior
-   - Error handling can be improved for different server configurations
-
-2. **Download Management Features**:
-   - Pause/resume functionality needs to be implemented
-   - Download priority management is not yet available
-   - Package name editing is not yet implemented
-
-3. **UI Enhancements**:
-   - Detailed view for download items needs to be implemented
-   - Sorting and filtering options for downloads
-   - Additional customization options for the interface
-
-## Next Steps
-
-1. **Testing and Bug Fixes**:
-   - Test with different PyLoad server versions to ensure compatibility
-   - Address any edge cases in API response handling
-   - Fix any remaining UI issues or inconsistencies
-
-2. **Feature Enhancements**:
-   - Implement download control actions (pause, resume, cancel)
-   - Add download queue management features
-   - Implement download filtering and sorting options
-
-3. **Performance and UX Improvements**:
-   - Optimize data refresh strategies for better performance
-   - Add offline support for basic functionality
-   - Improve error messaging and recovery options
 
 ## Communication Guidelines
 
@@ -192,5 +159,22 @@ When making changes or suggesting improvements:
 - Ask for clarification when the requirements are unclear
 - Provide code snippets for implementation suggestions
 - If replacing existing functionality, explain how the new approach is better
+
+## Next steps 
+Review the app with `read_multiple_files` I am having bugs viewing current and finished downloads. The downloads get added and completed just fine however the download tray area always shows "No download tasks." instead of what is currently being downloaded or what has finished downloading. See how the NAS download manager shows current and completed tasks?
+These are the console logs when I add a download
+```
+background.js:1 Making API request to: http://192.168.1.12:890/api/statusServer
+background.js:1 API response: {pause: false, queue: 1, download: true, reconnect: true, active: 0, …}active: 0download: truepause: falsequeue: 1reconnect: truespeed: 0total: 11[[Prototype]]: Object
+background.js:1 Making API request to: http://192.168.1.12:890/api/login
+background.js:1 API response: true
+background.js:1 Making API request to: http://192.168.1.12:890/api/checkURLs
+background.js:1 API response: {BasePlugin: Array(1)}
+background.js:1 Adding package: https___github.com_8bitgentleman_Yape_archive_refs_heads_master.zip, URL: https://github.com/8bitgentleman/Yape/archive/refs/heads/master.zip
+background.js:1 Making API request to: http://192.168.1.12:890/api/addPackage
+background.js:1 API response: 24
+background.js:1 Add package response: {success: true, data: 24}
+background.js:1 Uncaught (in promise) Error: Could not establish connection. Receiving end does not exist.
+```
 
 Please help maintain the high quality of this codebase by focusing on simplicity, maintainability, and robustness. The key goal is to create a modern, reliable Chrome extension that provides a better user experience than the original while maintaining all functionality.

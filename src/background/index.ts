@@ -84,8 +84,28 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
         return;
       }
       
-      // Notify popup to refresh downloads
-      chrome.runtime.sendMessage({ type: 'download_added' });
+      // Notify popup to refresh downloads with the package ID - handle potential errors
+      try {
+        chrome.runtime.sendMessage({ 
+          type: 'download_added', 
+          packageId: addResponse.data, // Include the package ID from the response
+          packageName: packageName,
+          url: info.linkUrl
+        });
+        console.log('Sent download_added message to popup with package ID:', addResponse.data);
+      } catch (error) {
+        console.warn('Failed to send message to popup - it might not be open', error);
+        // Store details in local storage to refresh on next popup open
+        await chrome.storage.local.set({ 
+          pendingRefresh: true,
+          lastAddedPackage: {
+            id: addResponse.data,
+            name: packageName,
+            url: info.linkUrl,
+            timestamp: Date.now()
+          }
+        });
+      }
       
       await showToast(tab.id, 'success', 'Download added successfully');
     }

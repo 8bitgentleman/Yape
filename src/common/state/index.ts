@@ -4,8 +4,8 @@ import { State, ConnectionSettings } from '../types';
 export const DEFAULT_STATE: State = {
   settings: {
     connection: {
-      hostname: '127.0.0.1',
-      port: 8000,
+      hostname: '192.168.1.12',
+      port: 890,
       protocol: 'http',
       path: '/',
       username: '',

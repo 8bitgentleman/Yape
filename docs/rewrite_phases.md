@@ -87,15 +87,11 @@ This document outlines the phased approach for modernizing the Yape Chrome exten
 - Create detailed download information view
 - Add cancellation support for active downloads
 
-### 4.3 Notifications System ✅
-- Implement toast notifications ✅
-- Fix notification permissions and resources ✅
-- Add notification when downloads are added ✅
+### 4.3 Notifications System 
+- Implement chrome notifications 
+- Fix notification permissions and resources 
+- Optional Add notification when downloads are added and/or finished
 
-### 4.4 Content Script Enhancements
-- Add page analysis for download links
-- Implement "download all" functionality for pages with multiple downloads
-- Create site-specific download handlers
 
 ## Phase 5: Testing and Refinement
 
