@@ -2,11 +2,11 @@
 
 ## Overview
 
-This document summarizes the modernization work done on the Yape Chrome extension, outlining what has been accomplished, the current architecture, and next steps.
+This document outlines the phased approach for modernizing the Yape Chrome extension to improve its architecture, maintainability, and feature set, using the nas-download-manager extension as a reference model.
 
 ## What We've Accomplished
 
-The modernization has focused on creating a completely new, modern implementation of the Yape extension located in the `/yape-modern` directory. The original codebase remains untouched, allowing for side-by-side comparison and gradual transition.
+The modernization has focused on creating a completely new, modern implementation of the Yape extension located in the `/Users/mtvogel/Documents/Github-Repos/Yape` directory. An example example-synology-download-manager chrome extension as a reference model can be found here `/Users/mtvogel/Documents/Github-Repos/Yape/example-synology-download-manager`
 
 ### Key Achievements
 
@@ -35,7 +35,7 @@ The modernization has focused on creating a completely new, modern implementatio
 The modernized extension follows a modular architecture:
 
 ```
-/yape-modern
+/yape
 ├── src/
 │   ├── background/    # Background service worker
 │   ├── common/        # Shared code (API, components, state, etc.)
@@ -56,25 +56,14 @@ The modernized extension follows a modular architecture:
 The modernization is not complete yet. The following steps are recommended:
 
 1. **Test and Debug**
-   - Build and test the extension in Chrome
+   - test the extension in Chrome
    - Address any bugs or issues found
-   - Ensure complete feature parity with the original extension
+   - update api calls as needed
 
 2. **Add Advanced Features**
-   - Implement download filtering and sorting
-   - Add pause/resume functionality
-   - Create detailed task views
-   - Implement batch operations
-
-3. **Performance Optimization**
-   - Optimize bundle size
-   - Improve rendering performance
-   - Enhance caching strategies
-
-4. **Complete Documentation**
-   - Add comprehensive API documentation
-   - Create user guide
-   - Document development processes
+   - add chrome icon notification badge numbers for finshed items
+   - migrate toast notifications to use actual chrome notifications
+   - Add pause/resume functionality for individual download
 
 ## How to Proceed
 

@@ -38,37 +38,46 @@ export class QueueApiClient extends BaseApiClient {
       const tasks: DownloadTask[] = [];
       const data = response.data;
       
-      // Process packages in PyLoad 0.4.9+ format
-      // This is the format in the logs where each item has name, links array, pid, etc.
-      if (Array.isArray(data) && data.length > 0 && data[0].links && Array.isArray(data[0].links)) {
-        console.log('[DEBUG] Processing PyLoad 0.4.9 format direct packages array');
-        
+      // Process PyLoad 0.4.9 format with nested links array
+      if (Array.isArray(data) && data.length > 0) {
+        // Focus on extracting individual files from nested packages structure
         data.forEach((pkg: any, pkgIndex: number) => {
-          try {
-            // Each package can have multiple links/files
-            if (pkg.links && Array.isArray(pkg.links)) {
-              pkg.links.forEach((link: any, linkIndex: number) => {
-                // Extract info from the link
-                const task: DownloadTask = {
-                  id: String(link.fid || link.packageID || `pkg-${pkgIndex}-link-${linkIndex}`),
-                  name: String(link.name || pkg.name || 'Unknown'),
-                  status: this.mapStatus(link.statusmsg || 'unknown'),
-                  url: String(link.url || ''),
-                  added: Number(pkg.added || Date.now() / 1000),
-                  percent: link.statusmsg === 'finished' ? 100 : 0,
-                  size: Number(link.size || 0),
-                  speed: 0, // Not in this format
-                  eta: 0,   // Not in this format
-                  format_eta: '00:00:00'
-                };
-                
-                console.log(`[DEBUG] Parsed PyLoad 0.4.9 file ${pkgIndex}-${linkIndex}:`, 
-                          task.name, task.status, task.percent);
-                tasks.push(task);
-              });
-            }
-          } catch (e) {
-            console.error(`[DEBUG] Failed to parse package ${pkgIndex}:`, e, pkg);
+          console.log('[DEBUG] Processing package:', pkg.name || `pkg-${pkgIndex}`);
+          
+          // Check for the links array with files
+          if (pkg.links && Array.isArray(pkg.links)) {
+            pkg.links.forEach((link: any, linkIndex: number) => {
+              // In PyLoad 0.4.9, status 0 is 'finished' and statusmsg can be 'finished', 'queued', etc.
+              const isCompleted = link.status === 0 || link.statusmsg === 'finished';
+              const isQueued = link.statusmsg === 'queued';
+              const isFailed = link.statusmsg === 'failed' || link.error;
+              
+              let status = 'unknown';
+              if (isCompleted) status = 'finished';
+              else if (isQueued) status = 'queued';
+              else if (isFailed) status = 'failed';
+              else if (link.statusmsg) status = link.statusmsg;
+              
+              // Fill in percent based on status
+              let percent = link.percent || 0;
+              if (isCompleted) percent = 100;
+              
+              const task: DownloadTask = {
+                id: String(link.fid || link.packageID || `pkg-${pkgIndex}-link-${linkIndex}`),
+                name: String(link.name || pkg.name || 'Unknown'),
+                status: status,
+                url: String(link.url || ''),
+                added: Number(pkg.added || Date.now() / 1000),
+                percent: percent,
+                size: Number(link.size || 0),
+                speed: Number(link.speed || 0),
+                eta: 0,
+                format_eta: '00:00:00'
+              };
+              
+              console.log(`[DEBUG] Parsed PyLoad 0.4.9 file: ${task.name}, Status: ${status}, Percent: ${percent}`);
+              tasks.push(task);
+            });
           }
         });
       }
@@ -249,5 +258,41 @@ export class QueueApiClient extends BaseApiClient {
     if (lowerStatus.includes('fail') || lowerStatus.includes('error')) return 'failed';
     
     return status;
+  }
+
+  /**
+   * Remove all completed tasks from PyLoad queue
+   * @returns API response
+   */
+  async clearFinishedTasks(): Promise<ApiResponse<boolean>> {
+    console.log('[DEBUG] Clearing all finished tasks');
+    try {
+      // For PyLoad 0.4.9, we can use the deleteFinished API endpoint
+      // which removes all finished downloads in one call
+      const response = await this.request<any>('deleteFinished');
+      console.log('[DEBUG] deleteFinished response:', response);
+      
+      // Also refresh the queue data to ensure we're in sync
+      const queueRefreshResponse = await this.request<any>('getQueueData');
+      
+      if (response.success) {
+        return response as ApiResponse<boolean>;
+      } else {
+        return {
+          success: false,
+          // Change 'failed-clear' to a known ApiError type, e.g., 'request-failed'
+          // Or use a more generic one if available, like 'operation-failed' or 'server-error'
+          error: 'request-failed', // Or another valid ApiError type
+          message: 'Failed to clear finished tasks (specific: failed-clear)' // You can add more context here
+        };
+      }
+    } catch (error) {
+      console.error('Error clearing finished tasks:', error);
+      return {
+        success: false,
+        error: 'request-failed',
+        message: 'Failed to clear finished tasks'
+      };
+    }
   }
 }

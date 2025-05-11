@@ -8,6 +8,7 @@ interface HeaderProps {
   onAddUrl: () => void;
   isRefreshing: boolean;
   onRefresh: () => void;
+  onClearFinished: () => void;
 }
 
 /**
@@ -20,7 +21,8 @@ const Header: React.FC<HeaderProps> = ({
   onOpenWebInterface,
   onAddUrl,
   isRefreshing,
-  onRefresh
+  onRefresh,
+  onClearFinished
 }) => {
   return (
     <div className="app-header">
@@ -60,11 +62,11 @@ const Header: React.FC<HeaderProps> = ({
         </button>
         
         <button
-          className={`icon-button ${limitSpeedEnabled ? 'active' : ''}`}
-          onClick={onToggleSpeedLimit}
-          title={limitSpeedEnabled ? 'Speed limit enabled' : 'Speed limit disabled'}
+          className="icon-button"
+          onClick={onClearFinished}
+          title="Clear all finished downloads"
         >
-          <i className="fas fa-filter"></i>
+          <i className="fas fa-trash-alt"></i>
         </button>
         
         <button

@@ -65,4 +65,11 @@ export class PyloadClient {
   async setLimitSpeedStatus(limitSpeed: boolean): Promise<ApiResponse<PyloadConfigValue>> {
     return this.configClient.setLimitSpeedStatus(limitSpeed);
   }
+
+  /**
+   * Remove all completed tasks from PyLoad queue
+   */
+  async clearFinishedTasks(): Promise<ApiResponse<boolean>> {
+    return this.queueClient.clearFinishedTasks();
+  }
 }

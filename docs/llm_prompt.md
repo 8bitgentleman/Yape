@@ -1,6 +1,25 @@
 # Yape Chrome Extension Modernization Project
 
-## Project Overview
+## Current Status Update (May 2025)
+
+We've made significant progress on modernizing the Yape Chrome extension:
+
+1. Restructured the codebase into modules:
+   - Split the API client into modular components for better maintainability
+   - Improved error handling and debugging capabilities
+   - Enhanced API response parsing for different PyLoad versions
+
+2. Fixed major issues:
+   - Implemented proper download task display from PyLoad API responses
+   - Added better status handling for completed downloads
+   - Added "Clear Finished" functionality to remove completed downloads
+
+3. Current challenges:
+   - Still experiencing some issues with download progress display
+   - Need to ensure proper compatibility with PyLoad 0.4.9 (original PyLoad, not PyLoad NG)
+   - Some downloads may not be displaying properly in the UI
+
+## Original Project Overview
 
 You are helping with the modernization of Yape (Yet Another PyLoad Extension), a Chrome extension for interacting with PyLoad download managers. The project is a ground-up rebuild of the original extension, using modern web technologies and best practices.
 

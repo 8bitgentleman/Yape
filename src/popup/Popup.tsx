@@ -39,8 +39,41 @@ const Popup: React.FC = () => {
     removeTask,
     clearCompletedTasks,
     addUrl,
-    addCurrentPage
+    addCurrentPage,
+    setDataLoading
   } = useDownloadManager(state);
+
+  /**
+   * Clear all finished downloads from server
+   */
+  const clearFinishedDownloads = async () => {
+    if (!state) return;
+    
+    try {
+      setDataLoading(true);
+      const client = new PyloadClient(state.settings.connection);
+      const response = await client.clearFinishedTasks();
+      
+      if (response.success) {
+        // Show notification of success
+        chrome.notifications.create('', {
+          type: 'basic',
+          title: 'PyLoad Downloads',
+          message: 'All finished downloads have been cleared',
+          iconUrl: './images/icon_128.png',
+        });
+        
+        // Refresh to show updated list
+        refreshDataImmediate();
+      } else {
+        console.error('Failed to clear finished downloads:', response.message);
+      }
+    } catch (err) {
+      console.error('Error clearing finished downloads:', err);
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   // Load initial state
   useEffect(() => {
@@ -184,6 +217,7 @@ const Popup: React.FC = () => {
         onAddUrl={() => setShowAddUrlForm(true)}
         isRefreshing={dataLoading}
         onRefresh={refreshDataImmediate}
+        onClearFinished={clearFinishedDownloads}
       />
       
       <div className="app-content">

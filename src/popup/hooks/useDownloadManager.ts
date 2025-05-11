@@ -134,38 +134,31 @@ export function useDownloadManager(state: State | null) {
         setCompletedTasks([]);
         setDownloadSpeed(0);
       } else {
+        const active: DownloadTask[] = [];
+        const completed: DownloadTask[] = [];
+        
         allTasks.forEach((task: DownloadTask, index) => {
-          console.log(`[DEBUG] Processing task ${index}:`, task);
-          console.log(`[DEBUG] Task details - Name: ${task.name || 'unnamed'}, Status: ${task.status || 'unknown'}, Percent: ${task.percent || 0}`);
-          
-          // Check for valid task structure
-          if (!task || typeof task !== 'object') {
-            console.warn(`[DEBUG] Invalid task at index ${index}:`, task);
-            return; // Skip this task
+          if (!task) {
+            console.warn(`[DEBUG] Skipping null/undefined task at index ${index}`);
+            return;
           }
           
-          // Check task status more thoroughly with fallbacks
-          let taskStatus: string;
-          if (task.status === undefined || task.status === null) {
-            console.log(`[DEBUG] Task has no status, defaulting to 'unknown'`);
-            taskStatus = 'unknown';
-          } else {
-            taskStatus = typeof task.status === 'string' ? task.status.toLowerCase() : 'unknown';
-          }
+          console.log(`[DEBUG] Processing task ${index}:`, 
+            `Name: ${task.name || 'unnamed'}`, 
+            `Status: ${task.status || 'unknown'}`, 
+            `Percent: ${task.percent || 0}`);
           
-          console.log(`[DEBUG] Normalized task status:`, taskStatus);
-          
-          const isCompleted = taskStatus.includes('finish') || 
-                             taskStatus.includes('complete') || 
-                             task.status === TaskStatus.Finished || 
-                             task.status === TaskStatus.Complete || 
-                             task.percent === 100;
+          // Improved status checking for PyLoad 0.4.9 format
+          const isCompleted = 
+            task.status === 'finished' || 
+            task.status === 'complete' || 
+            task.percent === 100;
           
           if (isCompleted) {
-            console.log(`[DEBUG] Task categorized as COMPLETED:`, task.name);
+            console.log(`[DEBUG] Task categorized as COMPLETED: ${task.name}`);
             completed.push(task);
           } else {
-            console.log(`[DEBUG] Task categorized as ACTIVE:`, task.name);
+            console.log(`[DEBUG] Task categorized as ACTIVE: ${task.name}`);
             active.push(task);
             // Sum up all download speeds
             const speed = task.speed || 0;
@@ -175,17 +168,12 @@ export function useDownloadManager(state: State | null) {
         });
         
         console.log(`[DEBUG] Final categorization - Active: ${active.length}, Completed: ${completed.length}`);
-        console.log('[DEBUG] Final Active tasks:', active);
-        console.log('[DEBUG] Final Completed tasks:', completed);
         
         // Update state with processed tasks
-        console.log('[DEBUG] Updating state with processed tasks');
         setActiveTasks(active);
         setCompletedTasks(completed);
         setDownloadSpeed(totalDownloadSpeed);
       }
-      
-      console.log('[DEBUG] State update complete');
 
       // Get limit speed status
       const limitSpeedResponse = await client.getLimitSpeedStatus();
@@ -434,6 +422,7 @@ export function useDownloadManager(state: State | null) {
     clearCompletedTasks,
     addUrl,
     addCurrentPage,
-    checkCurrentUrl
+    checkCurrentUrl,
+    setDataLoading
   };
 }
