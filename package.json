@@ -1,6 +1,6 @@
 {
   "name": "yape",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Extension for PyLoad to easily monitor and add downloads",
   "scripts": {
     "test": "jest",

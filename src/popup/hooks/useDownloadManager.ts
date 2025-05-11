@@ -22,8 +22,9 @@ export function useDownloadManager(state: State | null) {
   const refreshDataImmediate = useCallback(async () => {
     console.log('[DEBUG] Starting refreshDataImmediate');
     if (!state) {
-      console.log('[DEBUG] No state available, aborting refresh');
-      console.trace('[DEBUG] Call stack of refreshDataImmediate');
+      let errorMessage = 'No state available';
+      // console.log('[DEBUG] No state available, aborting refresh');
+      // console.trace('[DEBUG] Call stack of refreshDataImmediate');
       return;
     }
     
@@ -265,18 +266,49 @@ export function useDownloadManager(state: State | null) {
     if (!state || completedTasks.length === 0) return;
     
     try {
+      console.log('[DEBUG] Clearing all completed tasks');
       setDataLoading(true);
       const client = new PyloadClient(state.settings.connection);
       
-      // Remove tasks one by one
-      for (const task of completedTasks) {
-        await client.removeTask(task.id);
-      }
+      // Use the efficient API call to clear all finished tasks at once
+      const response = await client.clearFinishedTasks();
+      console.log('[DEBUG] clearFinishedTasks response:', response);
       
-      // Clear the completed tasks list
-      setCompletedTasks([]);
+      if (response.success) {
+        // Clear the completed tasks list locally
+        setCompletedTasks([]);
+        
+        // Show notification of success
+        chrome.notifications.create('', {
+          type: 'basic',
+          title: 'PyLoad Downloads',
+          message: `Successfully cleared ${completedTasks.length} completed download(s)`,
+          iconUrl: './images/icon_128.png',
+        });
+        
+        // Refresh data to ensure UI is synced with server
+        refreshDataImmediate();
+      } else {
+        console.error('[DEBUG] Failed to clear completed tasks:', response.message);
+        
+        // Show error notification
+        chrome.notifications.create('', {
+          type: 'basic',
+          title: 'Error',
+          message: 'Failed to clear completed downloads',
+          iconUrl: './images/icon_128.png',
+        });
+      }
     } catch (err) {
-      console.error('Failed to clear completed tasks:', err);
+      console.error('[DEBUG] Exception in clearCompletedTasks:', err);
+      
+      // Show error notification
+      chrome.notifications.create('', {
+        type: 'basic',
+        title: 'Error',
+        message: 'Failed to clear completed downloads',
+        iconUrl: './images/icon_128.png',
+      });
     } finally {
       setDataLoading(false);
     }

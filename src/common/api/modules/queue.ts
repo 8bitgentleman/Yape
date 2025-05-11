@@ -228,9 +228,29 @@ export class QueueApiClient extends BaseApiClient {
    * @param id Task ID
    */
   async removeTask(id: string): Promise<ApiResponse<boolean>> {
-    return this.request<boolean>('deletePackages', {
-      ids: JSON.stringify([id])
-    });
+    console.log(`[DEBUG] Removing task with ID: ${id}`);
+    try {
+      // PyLoad API expects 'pids' parameter with a stringified JSON array
+      // According to docs, deletePackages takes 'pids' parameter
+      const response = await this.request<boolean>('deletePackages', {
+        pids: JSON.stringify([id])
+      });
+      
+      console.log(`[DEBUG] Remove task response:`, response);
+      
+      return {
+        success: response.success,
+        data: response.success,
+        message: response.success ? 'Successfully removed task' : 'Failed to remove task'
+      };
+    } catch (error) {
+      console.error(`[DEBUG] Error removing task with ID ${id}:`, error);
+      return {
+        success: false,
+        error: 'request-failed',
+        message: 'Failed to remove task'
+      };
+    }
   }
 
   /**
@@ -267,25 +287,23 @@ export class QueueApiClient extends BaseApiClient {
   async clearFinishedTasks(): Promise<ApiResponse<boolean>> {
     console.log('[DEBUG] Clearing all finished tasks');
     try {
-      // For PyLoad 0.4.9, we can use the deleteFinished API endpoint
+      // For PyLoad 0.4.9, we use the deleteFinished API endpoint
       // which removes all finished downloads in one call
+      // According to PyLoad API docs, this takes no parameters
       const response = await this.request<any>('deleteFinished');
       console.log('[DEBUG] deleteFinished response:', response);
       
-      // Also refresh the queue data to ensure we're in sync
-      const queueRefreshResponse = await this.request<any>('getQueueData');
-      
-      if (response.success) {
-        return response as ApiResponse<boolean>;
-      } else {
-        return {
-          success: false,
-          // Change 'failed-clear' to a known ApiError type, e.g., 'request-failed'
-          // Or use a more generic one if available, like 'operation-failed' or 'server-error'
-          error: 'request-failed', // Or another valid ApiError type
-          message: 'Failed to clear finished tasks (specific: failed-clear)' // You can add more context here
-        };
+      // Check if the response contains deleted package IDs (as per PyLoad API docs)
+      if (response.success && Array.isArray(response.data)) {
+        console.log(`[DEBUG] Successfully cleared ${response.data.length} finished packages`);
       }
+      
+      // Return a simplified response for the UI
+      return {
+        success: response.success,
+        data: true,
+        message: response.success ? 'Successfully cleared finished tasks' : 'Failed to clear finished tasks'
+      };
     } catch (error) {
       console.error('Error clearing finished tasks:', error);
       return {

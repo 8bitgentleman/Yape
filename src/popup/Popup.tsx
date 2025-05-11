@@ -46,33 +46,10 @@ const Popup: React.FC = () => {
   /**
    * Clear all finished downloads from server
    */
-  const clearFinishedDownloads = async () => {
-    if (!state) return;
-    
-    try {
-      setDataLoading(true);
-      const client = new PyloadClient(state.settings.connection);
-      const response = await client.clearFinishedTasks();
-      
-      if (response.success) {
-        // Show notification of success
-        chrome.notifications.create('', {
-          type: 'basic',
-          title: 'PyLoad Downloads',
-          message: 'All finished downloads have been cleared',
-          iconUrl: './images/icon_128.png',
-        });
-        
-        // Refresh to show updated list
-        refreshDataImmediate();
-      } else {
-        console.error('Failed to clear finished downloads:', response.message);
-      }
-    } catch (err) {
-      console.error('Error clearing finished downloads:', err);
-    } finally {
-      setDataLoading(false);
-    }
+  const clearFinishedDownloads = () => {
+    console.log('[DEBUG] clearFinishedDownloads called from header button - delegating to clearCompletedTasks');
+    // Delegate to the same function used by "Clear all completed" button
+    clearCompletedTasks();
   };
 
   // Load initial state
