@@ -154,6 +154,7 @@ const Settings: React.FC = () => {
     showCompleted: boolean;
     autoRefresh: boolean;
     refreshInterval: number;
+    backgroundCheckInterval: number;
   }) => {
     if (!state) return;
     
@@ -177,6 +178,12 @@ const Settings: React.FC = () => {
       setTimeout(() => {
         setSaveStatus({ message: '', type: null });
       }, 3000);
+      
+      // If background check interval changed, notify background script to update
+      chrome.runtime.sendMessage({ 
+        type: 'settings_updated',
+        settings: settings
+      });
     } catch (error) {
       console.error('Failed to save interface settings', error);
       setSaveStatus({ 

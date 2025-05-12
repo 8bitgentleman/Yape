@@ -66,7 +66,7 @@ const Header: React.FC<HeaderProps> = ({
           onClick={onClearFinished}
           title="Clear all finished downloads"
         >
-          <i className="fas fa-trash-alt"></i>
+          <i className="fas fa-broom"></i>
         </button>
         
         <button

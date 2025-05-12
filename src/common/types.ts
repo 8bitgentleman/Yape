@@ -45,6 +45,7 @@ export interface State {
       showCompleted: boolean;
       autoRefresh: boolean;
       refreshInterval: number;
+      backgroundCheckInterval: number;
     };
   };
   tasks: DownloadTask[];

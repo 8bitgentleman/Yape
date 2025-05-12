@@ -62,7 +62,7 @@ The modernization is not complete yet. The following steps are recommended:
 
 2. **Add Advanced Features**
    - add chrome icon notification badge numbers for finshed items
-   - migrate toast notifications to use actual chrome notifications
+   - We should migrate toast notifications to use actual chrome notifications and only Notify when a download completes
    - Add pause/resume functionality for individual download
 
 ## How to Proceed

@@ -5,11 +5,13 @@ interface InterfaceSettingsProps {
     showCompleted: boolean;
     autoRefresh: boolean;
     refreshInterval: number;
+    backgroundCheckInterval: number;
   };
   onSave: (settings: {
     showCompleted: boolean;
     autoRefresh: boolean;
     refreshInterval: number;
+    backgroundCheckInterval: number;
   }) => void;
 }
 
@@ -106,6 +108,34 @@ const InterfaceSettings: React.FC<InterfaceSettingsProps> = ({
         />
         <div className="form-text">
           Interval between refreshes in milliseconds (1000 ms = 1 second)
+        </div>
+      </div>
+      
+      {/* Background check interval */}
+      <div className="mb-3">
+        <label htmlFor="backgroundCheckInterval" className="form-label">
+          Background check interval (seconds)
+        </label>
+        <input
+          type="number"
+          id="backgroundCheckInterval"
+          name="backgroundCheckInterval"
+          className="form-control"
+          value={formState.backgroundCheckInterval / 1000} // Convert ms to seconds for UI
+          onChange={(e) => {
+            const seconds = parseInt(e.target.value, 10);
+            const ms = isNaN(seconds) ? 60000 : seconds * 1000; // Convert to ms
+            setFormState(prev => ({
+              ...prev,
+              backgroundCheckInterval: ms
+            }));
+          }}
+          min={30}
+          max={3600}
+          step={10}
+        />
+        <div className="form-text">
+          Interval between background checks for finished downloads (in seconds)
         </div>
       </div>
       

@@ -14,7 +14,8 @@ export const DEFAULT_STATE: State = {
     ui: {
       showCompleted: true,
       autoRefresh: true,
-      refreshInterval: 3000
+      refreshInterval: 3000,
+      backgroundCheckInterval: 60000 // Default to checking every 60 seconds
     }
   },
   tasks: [],
