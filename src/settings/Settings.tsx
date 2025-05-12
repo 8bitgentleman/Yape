@@ -5,6 +5,7 @@ import { PyloadClient } from '../common/api/client';
 import LoadingSpinner from '../common/components/LoadingSpinner';
 import ConnectionForm from './components/ConnectionForm';
 import InterfaceSettings from './components/InterfaceSettings';
+import NotificationSettings from './components/NotificationSettings';
 
 /**
  * Settings page component
@@ -32,6 +33,21 @@ const Settings: React.FC = () => {
     const loadSettings = async () => {
       try {
         const loadedState = await loadState();
+        
+        // Initialize notification settings if they don't exist yet
+        if (!loadedState.settings.notifications) {
+          loadedState.settings.notifications = {
+            enabled: true,
+            onDownloadAdded: true,
+            onDownloadCompleted: true,
+            onDownloadFailed: true,
+            soundEnabled: false
+          };
+          
+          // Save the initialized state
+          await updateState(() => loadedState);
+        }
+        
         setState(loadedState);
         
         // Test connection if we have connection settings
@@ -193,6 +209,53 @@ const Settings: React.FC = () => {
     }
   };
 
+  /**
+   * Handle notification settings change
+   */
+  const handleNotificationSettingsChange = async (settings: {
+    enabled: boolean;
+    onDownloadAdded: boolean;
+    onDownloadCompleted: boolean;
+    onDownloadFailed: boolean;
+    soundEnabled: boolean;
+  }) => {
+    if (!state) return;
+    
+    try {
+      setSaveStatus({ message: 'Saving settings...', type: 'info' });
+      
+      // Update state
+      const updatedState = await updateState((currentState) => ({
+        ...currentState,
+        settings: {
+          ...currentState.settings,
+          notifications: settings,
+        },
+      }));
+      
+      setState(updatedState);
+      
+      setSaveStatus({ message: 'Settings saved successfully', type: 'success' });
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSaveStatus({ message: '', type: null });
+      }, 3000);
+      
+      // Notify background script that notification settings have changed
+      chrome.runtime.sendMessage({ 
+        type: 'notification_settings_updated',
+        settings: settings
+      });
+    } catch (error) {
+      console.error('Failed to save notification settings', error);
+      setSaveStatus({ 
+        message: 'Failed to save settings', 
+        type: 'error' 
+      });
+    }
+  };
+
   // Show loading spinner while initializing
   if (loading) {
     return <LoadingSpinner text="Loading settings..." />;
@@ -200,7 +263,7 @@ const Settings: React.FC = () => {
 
   // Render settings form
   return (
-    <div className="container py-4" style={{ maxWidth: '600px', margin: '0 auto' }}>
+    <div className="container py-4" style={{ maxWidth: '800px', margin: '0 auto' }}>
       <h1 className="mb-4">Yape Settings</h1>
       
       {/* Save status alert */}
@@ -253,6 +316,21 @@ const Settings: React.FC = () => {
         </div>
       </div>
       
+      {/* Notification settings */}
+      <div className="card mb-4">
+        <div className="card-header">
+          <h2 className="h5 card-title mb-0">Notification Settings</h2>
+        </div>
+        <div className="card-body">
+          {state && state.settings.notifications && (
+            <NotificationSettings
+              settings={state.settings.notifications}
+              onSave={handleNotificationSettingsChange}
+            />
+          )}
+        </div>
+      </div>
+      
       {/* About section */}
       <div className="card">
         <div className="card-header">
@@ -263,7 +341,7 @@ const Settings: React.FC = () => {
             Yape is a Chrome extension for PyLoad to easily monitor and add downloads.
           </p>
           <p className="mb-0">
-            <small className="text-muted">Version 2.0.0</small>
+            <small className="text-muted">Version 2</small>
           </p>
         </div>
       </div>

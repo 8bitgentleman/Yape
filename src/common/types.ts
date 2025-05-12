@@ -47,6 +47,13 @@ export interface State {
       refreshInterval: number;
       backgroundCheckInterval: number;
     };
+    notifications?: {
+      enabled: boolean;
+      onDownloadAdded: boolean;
+      onDownloadCompleted: boolean;
+      onDownloadFailed: boolean;
+      soundEnabled: boolean;
+    };
   };
   tasks: DownloadTask[];
   lastSevereError?: string;

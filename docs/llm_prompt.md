@@ -137,40 +137,6 @@ The modernization has made significant progress:
    - Proper error handling throughout the application
    - Type-safe interfaces for all data structures
 
-## Recent Fixes and Improvements
-
-Recent improvements to the extension include:
-
-1. **Fixed API Client**:
-   - Enhanced PyLoad API client with better response parsing
-   - Added support for different PyLoad API response formats
-   - Improved error handling and debug logging
-   - Fixed ID handling and type conversion issues
-
-2. **Fixed UI Issues**:
-   - Modernized UI based on NAS Download Manager style
-   - Fixed UI flashing when refreshing data
-   - Added loading placeholders for smoother UX
-   - Added proper download status display
-
-3. **Fixed Download Functionality**:
-   - Fixed right-click download menu functionality
-   - Implemented proper download task display
-   - Added notification system between background and popup
-   - Fixed download status detection and display
-   - Added badge indicator for completed downloads
-   - Fixed "Clear Finished" functionality
-   - Implemented Chrome notifications for download events
-
-4. **Performance and Reliability Improvements**:
-   - Implemented debouncing to prevent UI flashing
-   - Split functionality into focused components and hooks
-   - Optimized API calls to reduce unnecessary traffic
-   - Added state persistence across browser sessions
-   - Implemented robust error handling in service worker context
-   - Fixed issues with Chrome extension messaging
-   - Added TypeScript type safety throughout the codebase
-
 ## Technical Preferences
 
 - Use TypeScript for all new code
@@ -193,7 +159,7 @@ The extension is now functional with many key features working well:
 4. ✅ "Clear Finished" functionality works properly
 5. ✅ The extension maintains state across browser sessions
 
-However, we're still experiencing some issues with the display of active and completed downloads in the UI. The downloads get added and completed correctly, but they may not always appear in the download list.
+However, we're still experiencing some issues with the display of active download bars in the UI. As well as notificaitons
 
 
 ## Communication Guidelines

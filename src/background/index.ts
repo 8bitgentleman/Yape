@@ -5,24 +5,56 @@ import { ApiResponse, ConnectionSettings, DownloadTask, TaskStatus } from '../co
 /**
  * Request the notification to be shown by delegating to the background script
  * This function handles notification creation regardless of context
+ * Respects user notification settings
  * @param id Notification ID
  * @param options Notification options
+ * @param notificationType The type of notification for filtering (added, completed, failed)
  */
-function safeCreateNotification(id: string, options: {
+async function safeCreateNotification(id: string, options: {
   type: 'basic' | 'image' | 'list' | 'progress';
   title: string;
   message: string;
   iconUrl: string;
   priority?: number;
-}): void {
+  silent?: boolean;
+}, notificationType: 'added' | 'completed' | 'failed' = 'completed'): Promise<void> {
   // Log notification we're going to show
   console.log('[YAPE-DEBUG] Attempting to create notification:', {
     id,
     title: options.title,
-    message: options.message
+    message: options.message,
+    type: notificationType
   });
 
+  // Check notification settings before showing
   try {
+    // Get notification settings from storage
+    const data = await chrome.storage.local.get(['notificationSettings']);
+    const settings = data.notificationSettings;
+    
+    // If we have settings and notifications are disabled, skip
+    if (settings && !settings.enabled) {
+      console.log('[YAPE-DEBUG] Notifications are disabled in user settings, skipping');
+      return;
+    }
+    
+    // Check if this specific notification type is enabled
+    if (settings && (
+      (notificationType === 'added' && !settings.onDownloadAdded) ||
+      (notificationType === 'completed' && !settings.onDownloadCompleted) ||
+      (notificationType === 'failed' && !settings.onDownloadFailed)
+    )) {
+      console.log(`[YAPE-DEBUG] ${notificationType} notifications are disabled in user settings, skipping`);
+      return;
+    }
+    
+    // Set silent mode based on user settings
+    if (settings && !settings.soundEnabled) {
+      options.silent = true;
+    }
+    
+    // Continue with showing the notification
+    try {
     // We're in the background context, create notification directly
     if (chrome && chrome.notifications) {
       try {
@@ -66,8 +98,11 @@ function safeCreateNotification(id: string, options: {
         console.error('[YAPE-DEBUG] Failed to request notification via messaging:', messageError);
       }
     }
+    } catch (error) {
+      console.error('[YAPE-DEBUG] Error in notification system:', error);
+    }
   } catch (error) {
-    console.error('[YAPE-DEBUG] Error in notification system:', error);
+    console.error('[YAPE-DEBUG] Error checking notification settings:', error);
   }
 }
 
@@ -87,8 +122,12 @@ async function initializeExtension() {
   // Set up message listeners
   initializeMessageHandlers();
 
-  // Load previously stored notification IDs
-  const storedData = await chrome.storage.local.get(['lastNotifiedDownloadIds', 'badgeCount']);
+  // Load previously stored notification IDs and settings
+  const storedData = await chrome.storage.local.get([
+    'lastNotifiedDownloadIds', 
+    'badgeCount', 
+    'notificationSettings'
+  ]);
   
   if (storedData.lastNotifiedDownloadIds) {
     try {
@@ -100,6 +139,20 @@ async function initializeExtension() {
     } catch (error) {
       console.error('[YAPE] Error parsing stored notification IDs:', error);
     }
+  }
+  
+  // If notification settings don't exist, initialize them
+  if (!storedData.notificationSettings) {
+    console.log('[YAPE] Initializing notification settings in storage');
+    chrome.storage.local.set({
+      notificationSettings: {
+        enabled: true,
+        onDownloadAdded: true,
+        onDownloadCompleted: true,
+        onDownloadFailed: true,
+        soundEnabled: false
+      }
+    });
   }
   
   // Restore badge if there was a previous count
@@ -283,7 +336,7 @@ async function checkForFinishedDownloads() {
           title: 'Download Complete',
           message: `${task.name} has finished downloading`,
           iconUrl: './images/icon_128.png',
-        });
+        }, 'completed');
         
         // Add to our set of notified downloads
         lastNotifiedDownloadIds.add(task.id.toString());
@@ -298,7 +351,7 @@ async function checkForFinishedDownloads() {
           title: 'Downloads Complete',
           message: `${newlyFinishedTasks.length} downloads have finished`,
           iconUrl: './images/icon_128.png',
-        });
+        }, 'completed');
         
         // Add all to our set of notified downloads
         newlyFinishedTasks.forEach(task => {
@@ -468,7 +521,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
             title: 'Download Added',
             message: `"${packageName}" has been added to PyLoad`,
             iconUrl: './images/icon_128.png',
-          });
+          }, 'added');
         });
       } catch (error) {
         console.warn('[YAPE-DEBUG] Failed to send message to popup - it might not be open', error);
@@ -489,7 +542,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
           title: 'Download Added',
           message: `"${packageName}" has been added to PyLoad`,
           iconUrl: './images/icon_128.png',
-        });
+        }, 'added');
       }
       
       await showToast(tab.id, 'success', 'Download added successfully');
@@ -509,13 +562,22 @@ function initializeMessageHandlers() {
         title: message.title || 'Yape',
         message: message.message || '',
         iconUrl: './images/icon_128.png',
-      });
+      }, message.notificationType || 'completed');
     }
     
     // Handle settings update message
     if (message.type === 'settings_updated') {
       console.log('[YAPE-DEBUG] Background received settings update, reconfiguring background checks...');
       setupBackgroundChecks();
+    }
+    
+    // Handle notification settings update message
+    if (message.type === 'notification_settings_updated') {
+      console.log('[YAPE-DEBUG] Background received notification settings update:', message.settings);
+      // Store these settings in local storage for faster access
+      chrome.storage.local.set({ notificationSettings: message.settings }, () => {
+        console.log('[YAPE-DEBUG] Notification settings stored in local storage');
+      });
     }
     
     // Handle restore badge message
@@ -554,7 +616,7 @@ function initializeMessageHandlers() {
           title: 'Download Added',
           message: `"${message.packageName || 'Package'}" has been added to PyLoad`,
           iconUrl: './images/icon_128.png',
-        });
+        }, 'added');
       }
     }
     
@@ -637,8 +699,12 @@ async function startup() {
   console.log('[YAPE-DEBUG] Service worker startup called');
   
   try {
-    // Load previously stored notification IDs and badge count
-    const storedData = await chrome.storage.local.get(['lastNotifiedDownloadIds', 'badgeCount']);
+    // Load previously stored notification IDs, badge count, and notification settings
+    const storedData = await chrome.storage.local.get([
+      'lastNotifiedDownloadIds', 
+      'badgeCount',
+      'notificationSettings'
+    ]);
     
     if (storedData.lastNotifiedDownloadIds) {
       try {
@@ -650,6 +716,22 @@ async function startup() {
       } catch (error) {
         console.error('[YAPE-DEBUG] Error parsing stored notification IDs:', error);
       }
+    }
+    
+    // If notification settings don't exist, initialize them
+    if (!storedData.notificationSettings) {
+      console.log('[YAPE-DEBUG] Initializing notification settings in storage');
+      chrome.storage.local.set({
+        notificationSettings: {
+          enabled: true,
+          onDownloadAdded: true,
+          onDownloadCompleted: true,
+          onDownloadFailed: true,
+          soundEnabled: false
+        }
+      });
+    } else {
+      console.log('[YAPE-DEBUG] Loaded notification settings:', storedData.notificationSettings);
     }
     
     // Restore badge if there was a previous count

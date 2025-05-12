@@ -1,13 +1,38 @@
 /**
  * Notification utility functions
  */
+import { loadState } from '../state';
 
 /**
- * Show a Chrome notification
+ * Show a Chrome notification with respect to user settings
  * @param title Notification title
  * @param message Notification message
+ * @param type Type of notification (for filtering based on settings)
  */
-export function showNotification(title: string, message: string): Promise<string> {
+export async function showNotification(
+  title: string, 
+  message: string, 
+  type: 'added' | 'completed' | 'failed' = 'completed'
+): Promise<string | null> {
+  // Load state to check notification settings
+  const state = await loadState();
+  const notificationSettings = state.settings.notifications;
+  
+  // If notifications are not enabled, don't show
+  if (!notificationSettings || !notificationSettings.enabled) {
+    return null;
+  }
+  
+  // Check if this type of notification is enabled
+  if (
+    (type === 'added' && !notificationSettings.onDownloadAdded) ||
+    (type === 'completed' && !notificationSettings.onDownloadCompleted) ||
+    (type === 'failed' && !notificationSettings.onDownloadFailed)
+  ) {
+    return null;
+  }
+  
+  // Create and return notification ID
   return new Promise((resolve) => {
     chrome.notifications.create(
       {
@@ -15,6 +40,7 @@ export function showNotification(title: string, message: string): Promise<string
         iconUrl: chrome.runtime.getURL('images/icon_128.png'),
         title: title || 'Yape',
         message: message || '',
+        silent: !notificationSettings.soundEnabled,
       },
       (notificationId) => {
         resolve(notificationId);
