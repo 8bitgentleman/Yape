@@ -40,6 +40,8 @@ const Popup: React.FC = () => {
     clearCompletedTasks,
     addUrl,
     addCurrentPage,
+    pauseDownload,
+    resumeDownload,
     setDataLoading
   } = useDownloadManager(state);
 

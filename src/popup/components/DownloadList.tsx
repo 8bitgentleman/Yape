@@ -58,7 +58,11 @@ const DownloadList: React.FC<DownloadListProps> = ({
       ) : (
         <>
           {activeTasks.map((task) => (
-            <DownloadItem key={task.id} task={task} onRemove={onRemoveTask} />
+            <DownloadItem 
+              key={task.id} 
+              task={task} 
+              onRemove={onRemoveTask}
+            />
           ))}
           
           {showCompleted && completedTasks.length > 0 && (

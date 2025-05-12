@@ -1,5 +1,5 @@
 import React from 'react';
-import { DownloadTask, TaskStatus } from '../../common/types'; // Make sure TaskStatus includes all statuses used
+import { DownloadTask, TaskStatus } from '../../common/types';
 import ProgressBar from '../../common/components/ProgressBar';
 
 interface DownloadItemProps {
@@ -10,7 +10,7 @@ interface DownloadItemProps {
 // Define a type for the object returned by getStatusInfo
 interface StatusDisplayInfo {
   icon: string;
-  variant: 'success' | 'warning' | 'danger' | 'primary'; // Explicitly list the possible variant strings
+  variant: 'success' | 'warning' | 'danger' | 'primary';
 }
 
 /**
@@ -27,6 +27,10 @@ const DownloadItem: React.FC<DownloadItemProps> = ({
   
   // Check if task is paused
   const isPaused = task.status === TaskStatus.Paused;
+  
+  // Check if task is failed
+  const isFailed = task.status === TaskStatus.Failed || 
+                  task.status === 'failed';
   
   // Format file size
   const formatSize = (size: number): string => {
@@ -47,7 +51,6 @@ const DownloadItem: React.FC<DownloadItemProps> = ({
   };
   
   // Get status icon class and variant
-  // Add the explicit return type here:
   const getStatusInfo = (): StatusDisplayInfo => {
     if (isCompleted) return { 
       icon: 'fas fa-check status-icon complete', 
@@ -57,9 +60,7 @@ const DownloadItem: React.FC<DownloadItemProps> = ({
       icon: 'fas fa-pause status-icon paused', 
       variant: 'warning' 
     };
-    // Consider using TaskStatus.Failed if it's defined in your enum/type
-    // For example: if (task.status === TaskStatus.Failed)
-    if (task.status === 'failed') return { // Assuming 'failed' is a valid status value
+    if (isFailed) return { 
       icon: 'fas fa-times status-icon failed', 
       variant: 'danger' 
     };
@@ -70,15 +71,17 @@ const DownloadItem: React.FC<DownloadItemProps> = ({
     };
   };
   
-  const statusInfo = getStatusInfo(); // Now statusInfo.variant is correctly typed
+  const statusInfo = getStatusInfo();
   
   // Get status text
   const getStatusText = () => {
+    // Calculate bytes loaded - use bytesLoaded if available, otherwise estimate from percent
+    const loadedBytes = task.bytesLoaded !== undefined ? task.bytesLoaded : (task.size * task.percent / 100);
+    
     if (isCompleted) return '100% – ' + formatSize(task.size) + ' downloaded';
-    if (isPaused) return 'PAUSED – ' + task.percent.toFixed(0) + '% – ' + formatSize(task.size * task.percent / 100) + ' of ' + formatSize(task.size);
-    // Default status text for active/other states
-    if (task.status === 'failed') return 'FAILED - ' + task.percent.toFixed(0) + '%'; // Example for failed
-    return task.percent.toFixed(0) + '% – ' + formatSize(task.size * task.percent / 100) + ' of ' + formatSize(task.size) + ' downloaded';
+    if (isPaused) return 'PAUSED – ' + task.percent.toFixed(0) + '% – ' + formatSize(loadedBytes) + ' of ' + formatSize(task.size);
+    if (isFailed) return 'FAILED - ' + task.percent.toFixed(0) + '%';
+    return task.percent.toFixed(0) + '% – ' + formatSize(loadedBytes) + ' of ' + formatSize(task.size);
   };
 
   return (
@@ -90,8 +93,8 @@ const DownloadItem: React.FC<DownloadItemProps> = ({
       <ProgressBar
         progress={task.percent}
         showLabel={false}
-        animated={!isCompleted && !isPaused && task.status !== 'failed'} // Don't animate if failed
-        variant={statusInfo.variant} // This will now be type-correct
+        animated={!isCompleted && !isPaused && !isFailed}
+        variant={statusInfo.variant}
       />
       
       <div className="download-meta">
@@ -100,7 +103,7 @@ const DownloadItem: React.FC<DownloadItemProps> = ({
           <span>{getStatusText()}</span>
         </div>
         
-        {!isCompleted && !isPaused && task.status !== 'failed' && task.speed > 0 && (
+        {!isCompleted && !isFailed && task.speed > 0 && (
           <div className="download-speed">
             {formatSpeed(task.speed)}
           </div>

@@ -216,18 +216,44 @@ export class QueueApiClient extends BaseApiClient {
   async removeTask(id: string): Promise<ApiResponse<boolean>> {
     console.log(`[DEBUG] Removing task with ID: ${id}`);
     try {
-      // PyLoad API expects 'pids' parameter with a stringified JSON array
-      // According to docs, deletePackages takes 'pids' parameter
-      const response = await this.request<boolean>('deletePackages', {
-        pids: JSON.stringify([id])
+      // First, try to stop the download if it's running
+      // PyLoad requires stopping downloads before deleting them
+      const stopResponse = await this.request<boolean>('stopDownloads', {
+        fids: JSON.stringify([id])
       });
       
-      console.log(`[DEBUG] Remove task response:`, response);
+      console.log(`[DEBUG] Stop download response:`, stopResponse);
+      
+      // Wait a short delay to ensure the download is stopped
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Now attempt to delete the file
+      const deleteResponse = await this.request<boolean>('deleteFiles', {
+        fids: JSON.stringify([id])
+      });
+      
+      console.log(`[DEBUG] Delete files response:`, deleteResponse);
+      
+      // If deleting the file didn't work, try with deletePackages as a fallback
+      if (!deleteResponse.success) {
+        console.log(`[DEBUG] Trying deletePackages as fallback...`);
+        const packageResponse = await this.request<boolean>('deletePackages', {
+          pids: JSON.stringify([id])
+        });
+        
+        console.log(`[DEBUG] Delete packages response:`, packageResponse);
+        
+        return {
+          success: packageResponse.success,
+          data: packageResponse.success,
+          message: packageResponse.success ? 'Successfully removed task' : 'Failed to remove task'
+        };
+      }
       
       return {
-        success: response.success,
-        data: response.success,
-        message: response.success ? 'Successfully removed task' : 'Failed to remove task'
+        success: deleteResponse.success,
+        data: deleteResponse.success,
+        message: deleteResponse.success ? 'Successfully removed task' : 'Failed to remove task'
       };
     } catch (error) {
       console.error(`[DEBUG] Error removing task with ID ${id}:`, error);

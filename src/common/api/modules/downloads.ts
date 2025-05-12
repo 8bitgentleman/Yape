@@ -12,6 +12,55 @@ export class DownloadsApiClient extends BaseApiClient {
     super(settings, defaultTimeout);
     this.queueClient = new QueueApiClient(settings, defaultTimeout);
   }
+
+  /**
+   * Pause a download
+   */
+  async pauseDownload(fid: string): Promise<ApiResponse<boolean>> {
+    try {
+      console.log(`[DEBUG] Pausing download ${fid}`);
+      // PyLoad has different endpoints depending on version
+      // Try stopDownloads (newer versions)
+      const response = await this.request<any>('stopDownloads', { fids: [fid] });
+      
+      return {
+        success: true,
+        data: true
+      };
+    } catch (e) {
+      console.error('Failed to pause download:', e);
+      return {
+        success: false,
+        error: 'request-failed',
+        message: 'Failed to pause download'
+      };
+    }
+  }
+
+  /**
+   * Resume a download
+   */
+  async resumeDownload(fid: string): Promise<ApiResponse<boolean>> {
+    try {
+      console.log(`[DEBUG] Resuming download ${fid}`);
+      // PyLoad has different endpoints for resuming downloads
+      // Try restartFile (newer versions)
+      const response = await this.request<any>('restartFile', { fid });
+      
+      return {
+        success: true,
+        data: true
+      };
+    } catch (e) {
+      console.error('Failed to resume download:', e);
+      return {
+        success: false,
+        error: 'request-failed',
+        message: 'Failed to resume download'
+      };
+    }
+  }
+  
   /**
    * Get status of all downloads with extra debugging
    */
@@ -145,6 +194,9 @@ export class DownloadsApiClient extends BaseApiClient {
       data.downloads.forEach((item: any, index: number) => {
         try {
           // Extract task info
+          const bytesTotal = Number(item.size || item.total_size || 0);
+          const bytesLoaded = item.bleft ? (bytesTotal - Number(item.bleft)) : (bytesTotal * (Number(item.percent || 0) / 100));
+          
           const task: DownloadTask = {
             id: String(item.id || item.fid || `download-${index}`),
             name: String(item.name || item.packageName || 'Unknown'),
@@ -152,7 +204,8 @@ export class DownloadsApiClient extends BaseApiClient {
             url: String(item.url || item.host || ''),
             added: Number(item.added || Date.now() / 1000),
             percent: Number(item.percent || item.progress || 0),
-            size: Number(item.size || item.total_size || 0),
+            size: bytesTotal,
+            bytesLoaded: bytesLoaded,
             speed: Number(item.speed || item.download_speed || 0),
             eta: Number(item.eta || 0),
             format_eta: String(item.format_eta || item.eta || '00:00:00')

@@ -40,6 +40,14 @@ export class PyloadClient {
     return this.downloadsClient.getStatusDownloads();
   }
 
+  async pauseDownload(fid: string): Promise<ApiResponse<boolean>> {
+    return this.downloadsClient.pauseDownload(fid);
+  }
+
+  async resumeDownload(fid: string): Promise<ApiResponse<boolean>> {
+    return this.downloadsClient.resumeDownload(fid);
+  }
+
   // Queue methods
   async getQueueData(): Promise<ApiResponse<DownloadTask[]>> {
     return this.queueClient.getQueueData();
