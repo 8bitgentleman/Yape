@@ -2,6 +2,75 @@ import { loadState, updateState } from '../common/state';
 import { PyloadClient } from '../common/api/client';
 import { ApiResponse, ConnectionSettings, DownloadTask, TaskStatus } from '../common/types';
 
+/**
+ * Request the notification to be shown by delegating to the background script
+ * This function handles notification creation regardless of context
+ * @param id Notification ID
+ * @param options Notification options
+ */
+function safeCreateNotification(id: string, options: {
+  type: 'basic' | 'image' | 'list' | 'progress';
+  title: string;
+  message: string;
+  iconUrl: string;
+  priority?: number;
+}): void {
+  // Log notification we're going to show
+  console.log('[YAPE-DEBUG] Attempting to create notification:', {
+    id,
+    title: options.title,
+    message: options.message
+  });
+
+  try {
+    // We're in the background context, create notification directly
+    if (chrome && chrome.notifications) {
+      try {
+        chrome.notifications.create(id, options, (notificationId) => {
+          if (chrome.runtime.lastError) {
+            console.error('[YAPE-DEBUG] Error creating notification:', chrome.runtime.lastError);
+          } else {
+            console.log('[YAPE-DEBUG] Successfully created notification with ID:', notificationId || 'undefined');
+          }
+        });
+      } catch (directError) {
+        console.error('[YAPE-DEBUG] Direct notification creation failed:', directError);
+
+        // Try an alternative approach - self-message passing
+        try {
+          // Send a message to ourselves to create the notification
+          chrome.runtime.sendMessage({
+            type: 'create_notification',
+            id: id,
+            options: options
+          });
+          console.log('[YAPE-DEBUG] Sent self-message to create notification');
+        } catch (selfMessageError) {
+          console.error('[YAPE-DEBUG] Self-message for notification failed:', selfMessageError);
+        }
+      }
+    } else {
+      // We're likely in a content script or detached context - log what we would show
+      console.log('[YAPE-DEBUG] Notification would show:', options.title, '-', options.message);
+      console.warn('[YAPE-DEBUG] Notifications API not available in this context');
+      
+      // Try to send a message to the background script
+      try {
+        chrome.runtime.sendMessage({
+          type: 'create_notification',
+          id: id,
+          options: options
+        });
+        console.log('[YAPE-DEBUG] Requested background to create notification');
+      } catch (messageError) {
+        console.error('[YAPE-DEBUG] Failed to request notification via messaging:', messageError);
+      }
+    }
+  } catch (error) {
+    console.error('[YAPE-DEBUG] Error in notification system:', error);
+  }
+}
+
 // Track the last notified downloads to avoid duplicate notifications
 let lastNotifiedDownloadIds: Set<string> = new Set();
 
@@ -171,11 +240,28 @@ async function checkForFinishedDownloads() {
     // Update badge with the number of finished tasks
     updateBadge(finishedTasks.length);
     
+    // Load current known IDs before checking for new ones
+    let storedIds: string[] = [];
+    try {
+      const storedData = await chrome.storage.local.get(['lastNotifiedDownloadIds']);
+      if (storedData.lastNotifiedDownloadIds) {
+        storedIds = JSON.parse(storedData.lastNotifiedDownloadIds);
+        console.log(`[YAPE-DEBUG] Loaded ${storedIds.length} IDs from storage before checking for new downloads`);
+      }
+    } catch (error) {
+      console.error('[YAPE-DEBUG] Error loading stored IDs:', error);
+    }
+
+    // Make sure we have the latest set of notified IDs
+    if (storedIds.length > 0) {
+      lastNotifiedDownloadIds = new Set(storedIds);
+    }
+    
     // Debugging current notification IDs
     console.log(`[YAPE-DEBUG] Current notified download IDs (${lastNotifiedDownloadIds.size}):`, Array.from(lastNotifiedDownloadIds));
     
     // Check for newly completed downloads (not in our lastNotifiedDownloadIds set)
-    const newlyFinishedTasks = finishedTasks.filter(task => !lastNotifiedDownloadIds.has(task.id));
+    const newlyFinishedTasks = finishedTasks.filter(task => !lastNotifiedDownloadIds.has(task.id.toString()));
     
     console.log(`[YAPE-DEBUG] Found ${newlyFinishedTasks.length} newly finished downloads`);
     if (newlyFinishedTasks.length > 0) {
@@ -190,45 +276,33 @@ async function checkForFinishedDownloads() {
       if (newlyFinishedTasks.length === 1) {
         const task = newlyFinishedTasks[0];
         
-        try {
-          // Show notification
-          console.log(`[YAPE-DEBUG] Creating notification for task: ${task.name}`);
-          chrome.notifications.create('download-complete-' + Date.now(), {
-            type: 'basic',
-            title: 'Download Complete',
-            message: `${task.name} has finished downloading`,
-            iconUrl: './images/icon_128.png',
-          }, (notificationId) => {
-            console.log('[YAPE-DEBUG] Created notification with ID:', notificationId || 'undefined');
-          });
-        } catch (error) {
-          console.error('[YAPE-DEBUG] Error creating notification:', error);
-        }
+        // Show notification
+        console.log(`[YAPE-DEBUG] Creating notification for task: ${task.name}`);
+        safeCreateNotification('download-complete-' + Date.now(), {
+          type: 'basic',
+          title: 'Download Complete',
+          message: `${task.name} has finished downloading`,
+          iconUrl: './images/icon_128.png',
+        });
         
         // Add to our set of notified downloads
-        lastNotifiedDownloadIds.add(task.id);
+        lastNotifiedDownloadIds.add(task.id.toString());
         console.log(`[YAPE-DEBUG] Added task ID ${task.id} to notified set`);
       } 
       // If there are multiple new downloads, show a count
       else if (newlyFinishedTasks.length > 1) {
-        try {
-          // Show notification
-          console.log(`[YAPE-DEBUG] Creating group notification for ${newlyFinishedTasks.length} tasks`);
-          chrome.notifications.create('downloads-complete-' + Date.now(), {
-            type: 'basic',
-            title: 'Downloads Complete',
-            message: `${newlyFinishedTasks.length} downloads have finished`,
-            iconUrl: './images/icon_128.png',
-          }, (notificationId) => {
-            console.log('[YAPE-DEBUG] Created group notification with ID:', notificationId || 'undefined');
-          });
-        } catch (error) {
-          console.error('[YAPE-DEBUG] Error creating group notification:', error);
-        }
+        // Show notification
+        console.log(`[YAPE-DEBUG] Creating group notification for ${newlyFinishedTasks.length} tasks`);
+        safeCreateNotification('downloads-complete-' + Date.now(), {
+          type: 'basic',
+          title: 'Downloads Complete',
+          message: `${newlyFinishedTasks.length} downloads have finished`,
+          iconUrl: './images/icon_128.png',
+        });
         
         // Add all to our set of notified downloads
         newlyFinishedTasks.forEach(task => {
-          lastNotifiedDownloadIds.add(task.id);
+          lastNotifiedDownloadIds.add(task.id.toString());
           console.log(`[YAPE-DEBUG] Added task ID ${task.id} to notified set`);
         });
       }
@@ -368,15 +442,36 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
       
       // Notify popup to refresh downloads with the package ID - handle potential errors
       try {
+        // Check if popup is open before sending message
         chrome.runtime.sendMessage({ 
           type: 'download_added', 
           packageId: addResponse.data, // Include the package ID from the response
           packageName: packageName,
           url: info.linkUrl
+        }).catch(error => {
+          // This will catch the error if popup isn't open
+          console.log('[YAPE-DEBUG] Popup not open, storing refresh data for next open');
+          // Store details in local storage to refresh on next popup open
+          chrome.storage.local.set({ 
+            pendingRefresh: true,
+            lastAddedPackage: {
+              id: addResponse.data,
+              name: packageName,
+              url: info.linkUrl,
+              timestamp: Date.now()
+            }
+          });
+          
+          // Show a notification that the download was added
+          safeCreateNotification(`download-added-${Date.now()}`, {
+            type: 'basic',
+            title: 'Download Added',
+            message: `"${packageName}" has been added to PyLoad`,
+            iconUrl: './images/icon_128.png',
+          });
         });
-        console.log('Sent download_added message to popup with package ID:', addResponse.data);
       } catch (error) {
-        console.warn('Failed to send message to popup - it might not be open', error);
+        console.warn('[YAPE-DEBUG] Failed to send message to popup - it might not be open', error);
         // Store details in local storage to refresh on next popup open
         await chrome.storage.local.set({ 
           pendingRefresh: true,
@@ -386,6 +481,14 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
             url: info.linkUrl,
             timestamp: Date.now()
           }
+        });
+        
+        // Show a notification that the download was added
+        safeCreateNotification(`download-added-${Date.now()}`, {
+          type: 'basic',
+          title: 'Download Added',
+          message: `"${packageName}" has been added to PyLoad`,
+          iconUrl: './images/icon_128.png',
         });
       }
       
@@ -397,9 +500,11 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
 // Initialize message handlers
 function initializeMessageHandlers() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log('[YAPE-DEBUG] Received message:', message.type);
+    
     // Handle show notification message
     if (message.type === 'notification') {
-      chrome.notifications.create('', {
+      safeCreateNotification(`notification-${Date.now()}`, {
         type: 'basic',
         title: message.title || 'Yape',
         message: message.message || '',
@@ -409,8 +514,48 @@ function initializeMessageHandlers() {
     
     // Handle settings update message
     if (message.type === 'settings_updated') {
-      console.log('Background received settings update, reconfiguring background checks...');
+      console.log('[YAPE-DEBUG] Background received settings update, reconfiguring background checks...');
       setupBackgroundChecks();
+    }
+    
+    // Handle restore badge message
+    if (message.type === 'restore_badge' && message.count) {
+      console.log(`[YAPE-DEBUG] Received request to restore badge with count: ${message.count}`);
+      updateBadge(message.count);
+    }
+    
+    // Handle explicit notification creation message
+    if (message.type === 'create_notification' && message.options) {
+      console.log('[YAPE-DEBUG] Received request to create notification via message');
+      try {
+        chrome.notifications.create(message.id || `notification-${Date.now()}`, message.options, (notificationId) => {
+          console.log('[YAPE-DEBUG] Created notification via message handler:', notificationId);
+        });
+      } catch (error) {
+        console.error('[YAPE-DEBUG] Failed to create notification via message handler:', error);
+      }
+    }
+    
+    // Handle download added message - mainly used for tracking ID for notification tracking
+    if (message.type === 'download_added' && message.packageId) {
+      console.log(`[YAPE-DEBUG] Download added with ID: ${message.packageId}, adding to notified list`);
+      // Add to our notified set to avoid showing completion notification later
+      lastNotifiedDownloadIds.add(message.packageId.toString());
+      
+      // Persist the notification IDs
+      chrome.storage.local.set({
+        lastNotifiedDownloadIds: JSON.stringify(Array.from(lastNotifiedDownloadIds))
+      });
+      
+      // Show notification for added download if requested
+      if (message.showNotification) {
+        safeCreateNotification(`download-added-${Date.now()}`, {
+          type: 'basic',
+          title: 'Download Added',
+          message: `"${message.packageName || 'Package'}" has been added to PyLoad`,
+          iconUrl: './images/icon_128.png',
+        });
+      }
     }
     
     // Return true to indicate async response

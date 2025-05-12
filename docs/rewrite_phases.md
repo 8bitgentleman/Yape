@@ -87,10 +87,11 @@ This document outlines the phased approach for modernizing the Yape Chrome exten
 - Create detailed download information view
 - Add cancellation support for active downloads
 
-### 4.3 Notifications System 
-- Implement chrome notifications 
-- Fix notification permissions and resources 
-- Optional Add notification when downloads are added and/or finished
+### 4.3 Notifications System ✅
+- Implement Chrome notifications for download events ✅
+- Badge counter for showing completed downloads ✅
+- Robust notifications in service worker context ✅
+- Fixed notification permissions and resources ✅
 
 
 ## Phase 5: Testing and Refinement
@@ -130,11 +131,11 @@ This document outlines the phased approach for modernizing the Yape Chrome exten
 
 ## Next Steps (Immediate)
 
-1. **Test Current Implementation**:
-   - Test core download functionality with different PyLoad servers
-   - Verify that downloads appear in the UI from both right-click and manual addition
-   - Test across different browser environments
-   - Test connection status display accuracy
+1. **Ensure Download Display Works**:
+   - Debug and fix issues with download display in the UI
+   - Verify that active and completed downloads appear correctly
+   - Test with different PyLoad server versions
+   - Ensure correct state updates after downloads complete
 
 2. **Implement Missing Features**:
    - Pause/resume functionality for downloads
@@ -143,7 +144,7 @@ This document outlines the phased approach for modernizing the Yape Chrome exten
    - Add package name editing functionality
 
 3. **Bug Fixes and Enhancements**:
-   - Fix any issues with API compatibility across PyLoad versions
+   - Fix any remaining issues with API compatibility across PyLoad versions
    - Add better error display for failed downloads
    - Implement download speed throttling controls
    - Add download queue management

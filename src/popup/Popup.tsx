@@ -52,38 +52,42 @@ const Popup: React.FC = () => {
     clearCompletedTasks();
   };
 
-  // Effect to temporarily hide badge when popup is opened, but restore it when closed
+  // Effect to store badge state when popup opens and restore it when popup closes
   useEffect(() => {
     try {
       console.log('[YAPE] Popup opened, temporarily hiding badge');
       
-      // Temporarily hide the badge while popup is open
-      chrome.action.setBadgeText({ text: '' });
-      
-      // When popup closes, wait a moment and check if we need to restore badge
-      return () => {
-        // We use setTimeout to ensure this code runs after the popup is closed
-        setTimeout(() => {
-          try {
-            chrome.storage.local.get(['badgeCount'], (result) => {
-              try {
-                if (result.badgeCount && result.badgeCount > 0) {
-                  console.log(`[YAPE] Popup closed, restoring badge to ${result.badgeCount}`);
-                  chrome.action.setBadgeText({ text: result.badgeCount.toString() });
-                  chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
-                }
-              } catch (innerError) {
-                console.error('[YAPE] Error restoring badge in callback:', innerError);
-              }
-            });
-          } catch (error) {
-            console.error('[YAPE] Error getting badge count after popup close:', error);
-          }
-        }, 500); // Short delay to ensure the popup is fully closed
-      };
+      // Get current badge count from storage
+      chrome.storage.local.get(['badgeCount'], (result) => {
+        // Store the current badge count in memory
+        const currentBadgeCount = result.badgeCount;
+        
+        // Clear the badge while popup is open
+        chrome.action.setBadgeText({ text: '' });
+        
+        // Set a flag to indicate the popup is open
+        chrome.storage.local.set({ popupOpen: true });
+        
+        // When popup closes, restore the badge after a short delay
+        window.onbeforeunload = () => {
+          // Mark popup as closed
+          chrome.storage.local.set({ popupOpen: false });
+          
+          // Request the background script to restore the badge
+          setTimeout(() => {
+            if (currentBadgeCount && currentBadgeCount > 0) {
+              chrome.runtime.sendMessage({ 
+                type: 'restore_badge', 
+                count: currentBadgeCount 
+              }).catch(error => {
+                console.log('[YAPE] Could not send restore_badge message, background may not be ready', error);
+              });
+            }
+          }, 300);
+        };
+      });
     } catch (error) {
       console.error('[YAPE] Error in badge effect:', error);
-      return () => {}; // Return empty cleanup function
     }
   }, []);
 
@@ -237,7 +241,7 @@ const Popup: React.FC = () => {
           <div className="alert alert-danger mt-2 mb-3">{error}</div>
         )}
         
-        {showAddUrlForm ? (
+        {/* {showAddUrlForm ? (
           <AddUrlForm
             onAddDownload={handleAddUrl}
             onCancel={() => setShowAddUrlForm(false)}
@@ -269,7 +273,7 @@ const Popup: React.FC = () => {
               isLoading={dataLoading}
             />
           </>
-        )}
+        )} */}
       </div>
       
       <StatusBar
