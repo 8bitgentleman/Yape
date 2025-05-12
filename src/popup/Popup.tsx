@@ -240,7 +240,12 @@ const Popup: React.FC = () => {
         {error && (
           <div className="alert alert-danger mt-2 mb-3">{error}</div>
         )}
-        
+        {showAddUrlForm ? (
+          <AddUrlForm
+            onAddDownload={handleAddUrl}
+            onCancel={() => setShowAddUrlForm(false)}
+          />
+        ): (<></>)}
         {/* {showAddUrlForm ? (
           <AddUrlForm
             onAddDownload={handleAddUrl}

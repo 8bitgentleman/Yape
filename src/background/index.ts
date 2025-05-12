@@ -333,8 +333,8 @@ async function checkForFinishedDownloads() {
         console.log(`[YAPE-DEBUG] Creating notification for task: ${task.name}`);
         safeCreateNotification('download-complete-' + Date.now(), {
           type: 'basic',
-          title: 'Download Complete',
-          message: `${task.name} has finished downloading`,
+          title: `${task.name}`,
+          message: 'Download Finished',
           iconUrl: './images/icon_128.png',
         }, 'completed');
         
@@ -519,7 +519,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
           safeCreateNotification(`download-added-${Date.now()}`, {
             type: 'basic',
             title: 'Download Added',
-            message: `"${packageName}" has been added to PyLoad`,
+            message: `${packageName}`,
             iconUrl: './images/icon_128.png',
           }, 'added');
         });
@@ -540,7 +540,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
         safeCreateNotification(`download-added-${Date.now()}`, {
           type: 'basic',
           title: 'Download Added',
-          message: `"${packageName}" has been added to PyLoad`,
+          message: `${packageName}`,
           iconUrl: './images/icon_128.png',
         }, 'added');
       }
@@ -614,7 +614,7 @@ function initializeMessageHandlers() {
         safeCreateNotification(`download-added-${Date.now()}`, {
           type: 'basic',
           title: 'Download Added',
-          message: `"${message.packageName || 'Package'}" has been added to PyLoad`,
+          message: `"${message.packageName || 'Package has been added to PyLoad'}"`,
           iconUrl: './images/icon_128.png',
         }, 'added');
       }

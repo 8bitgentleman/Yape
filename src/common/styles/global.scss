@@ -13,13 +13,15 @@ body {
 
 #root {
   width: $container-width;
-  min-height: 300px;
+  // min-height: 300px;
   max-height: 600px;
   overflow-y: auto;
   overflow-x: hidden;
   background-color: white;
 }
-
+.settings#root{
+  width: 100%;
+}
 // Common utility classes
 .ellipsis {
   white-space: nowrap;

@@ -263,7 +263,7 @@ const Settings: React.FC = () => {
 
   // Render settings form
   return (
-    <div className="container py-4" style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div className="container py-4" style={{ margin: '0 auto' }}>
       <h1 className="mb-4">Yape Settings</h1>
       
       {/* Save status alert */}
