@@ -11,20 +11,20 @@ $background-color: #f0f0f0; // Light gray for background
 
 // Font variables
 $font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-$font-size-base: 0.9rem;
+$font-size-base: 0.8rem; // Reduced from 0.9rem
 $font-weight-normal: 400;
-$font-weight-bold: 700;
+$font-weight-bold: 600; // Reduced from 700 for a lighter look
 
 // Layout variables
-$container-width: 380px;
-$spacing-xs: 0.25rem;
-$spacing-sm: 0.5rem;
-$spacing-md: 0.75rem;
-$spacing-lg: 1.25rem;
-$spacing-xl: 2rem;
+$container-width: 360px; // Reduced from 380px
+$spacing-xs: 0.2rem;  // Reduced from 0.25rem
+$spacing-sm: 0.4rem;  // Reduced from 0.5rem
+$spacing-md: 0.6rem;  // Reduced from 0.75rem
+$spacing-lg: 1rem;    // Reduced from 1.25rem
+$spacing-xl: 1.5rem;  // Reduced from 2rem
 
 // Border variables
-$border-radius: 0.25rem;
+$border-radius: 0.2rem; // Reduced from 0.25rem
 $border-width: 1px;
 $border-color: #dee2e6;
 
@@ -33,9 +33,9 @@ $transition-speed: 0.2s;
 $transition-function: ease-in-out;
 
 // Header variables
-$header-height: 50px;
+$header-height: 40px; // Reduced from 50px
 $header-bg: white;
 $header-border-color: #ddd;
 
 // Icon button size
-$icon-button-size: 36px;
+$icon-button-size: 28px; // Reduced from 36px

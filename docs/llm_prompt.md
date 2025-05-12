@@ -172,20 +172,6 @@ When making changes or suggesting improvements:
 - If replacing existing functionality, explain how the new approach is better
 
 ## Next steps 
-Review the app with `read_multiple_files` I am having bugs viewing current and finished downloads. The downloads get added and completed just fine however the download tray area always shows "No download tasks." instead of what is currently being downloaded or what has finished downloading. See how the NAS download manager shows current and completed tasks?
-These are the console logs when I add a download
-```
-background.js:1 Making API request to: http://192.168.1.12:890/api/statusServer
-background.js:1 API response: {pause: false, queue: 1, download: true, reconnect: true, active: 0, …}active: 0download: truepause: falsequeue: 1reconnect: truespeed: 0total: 11[[Prototype]]: Object
-background.js:1 Making API request to: http://192.168.1.12:890/api/login
-background.js:1 API response: true
-background.js:1 Making API request to: http://192.168.1.12:890/api/checkURLs
-background.js:1 API response: {BasePlugin: Array(1)}
-background.js:1 Adding package: https___github.com_8bitgentleman_Yape_archive_refs_heads_master.zip, URL: https://github.com/8bitgentleman/Yape/archive/refs/heads/master.zip
-background.js:1 Making API request to: http://192.168.1.12:890/api/addPackage
-background.js:1 API response: 24
-background.js:1 Add package response: {success: true, data: 24}
-background.js:1 Uncaught (in promise) Error: Could not establish connection. Receiving end does not exist.
-```
+Review the app with `read_multiple_files` 
 
 Please help maintain the high quality of this codebase by focusing on simplicity, maintainability, and robustness. The key goal is to create a modern, reliable Chrome extension that provides a better user experience than the original while maintaining all functionality.

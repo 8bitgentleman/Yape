@@ -85,14 +85,13 @@ export class BaseApiClient {
       requestInit.signal = controller.signal;
 
       // Execute fetch request
-      console.log(`Making API request to: ${url.toString()}`);
       const response = await fetch(url.toString(), requestInit);
       clearTimeout(timeoutId);
       
       // Log raw response details
-      console.log(`API Response status: ${response.status} ${response.statusText}`);
-      console.log(`Response headers:`, Object.fromEntries([...response.headers.entries()]));
-      console.log(`Response URL: ${response.url}`);
+      // console.log(`API Response status: ${response.status} ${response.statusText}`);
+      // console.log(`Response headers:`, Object.fromEntries([...response.headers.entries()]));
+      // console.log(`Response URL: ${response.url}`);
       
       // Create a clone to read the response body for logging
       const clonedResponse = response.clone();

@@ -90,6 +90,10 @@ export class DownloadsApiClient extends BaseApiClient {
           if (item) {
             try {
               // Extract required fields with fallbacks
+              // Use downloaded size (bleft) if available
+              const bytesTotal = Number(item.size || item.total_size || 0);
+              const bytesLoaded = item.bleft ? (bytesTotal - Number(item.bleft)) : (bytesTotal * (Number(item.percent || 0) / 100));
+              
               const task: DownloadTask = {
                 id: String(item.id || item.fid || `unknown-${index}`),
                 name: String(item.name || item.packageName || 'Unknown'),
@@ -97,7 +101,8 @@ export class DownloadsApiClient extends BaseApiClient {
                 url: String(item.url || item.host || ''),
                 added: Number(item.added || Date.now() / 1000),
                 percent: Number(item.percent || item.progress || 0),
-                size: Number(item.size || item.total_size || 0),
+                size: bytesTotal,
+                bytesLoaded: bytesLoaded, // Add bytesLoaded property
                 speed: Number(item.speed || item.download_speed || 0),
                 eta: Number(item.eta || 0),
                 format_eta: String(item.format_eta || item.eta || '00:00:00')
@@ -217,7 +222,25 @@ export class DownloadsApiClient extends BaseApiClient {
   /**
    * Map PyLoad status to our TaskStatus enum
    */
-  private mapStatus(status: string): TaskStatus | string {
+  private mapStatus(status: string | number): TaskStatus | string {
+    // If status is a number, convert it to a string representation first
+    if (typeof status === 'number') {
+      // Map common PyLoad numeric status codes
+      switch (status) {
+        case 1: return TaskStatus.Waiting;
+        case 2: return TaskStatus.Waiting;
+        case 3: return TaskStatus.Waiting;
+        case 7: return TaskStatus.Paused;
+        case 12: return TaskStatus.Active; // Downloading
+        case 13: return TaskStatus.Active; // Processing
+        case 9: return TaskStatus.Finished;
+        case 10: return TaskStatus.Finished;
+        case 11: return TaskStatus.Failed;
+        default: return `status-${status}`; // Return as string for unknown codes
+      }
+    }
+    
+    // Handle string status
     const lowerStatus = status.toLowerCase();
     
     if (lowerStatus.includes('queue')) return TaskStatus.Queued;

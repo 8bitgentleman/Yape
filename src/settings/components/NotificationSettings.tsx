@@ -6,6 +6,7 @@ interface NotificationSettingsProps {
     onDownloadAdded: boolean;
     onDownloadCompleted: boolean;
     onDownloadFailed: boolean;
+    onClearCompleted: boolean; // Added new notification type
     soundEnabled: boolean;
   };
   onSave: (settings: {
@@ -13,6 +14,7 @@ interface NotificationSettingsProps {
     onDownloadAdded: boolean;
     onDownloadCompleted: boolean;
     onDownloadFailed: boolean;
+    onClearCompleted: boolean; // Added new notification type
     soundEnabled: boolean;
   }) => void;
 }
@@ -109,6 +111,22 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           />
           <label className="form-check-label" htmlFor="onDownloadFailed">
             When downloads fail
+          </label>
+        </div>
+        
+        {/* Clear completed notifications */}
+        <div className="form-check mb-3">
+          <input
+            type="checkbox"
+            id="onClearCompleted"
+            name="onClearCompleted"
+            className="form-check-input"
+            checked={formState.onClearCompleted}
+            onChange={handleCheckboxChange}
+            disabled={!formState.enabled}
+          />
+          <label className="form-check-label" htmlFor="onClearCompleted">
+            When completed downloads are cleared
           </label>
         </div>
         

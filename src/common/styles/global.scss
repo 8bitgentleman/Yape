@@ -52,12 +52,12 @@ body {
 .app-title {
   display: flex;
   align-items: center;
-  font-size: .9rem;
+  font-size: .8rem;
   font-weight: $font-weight-bold;
   color: $dark-color;
   
   .app-logo {
-    height: 30px;
+    height: 24px; // Reduced from 30px
     margin-right: $spacing-sm;
   }
 }
@@ -133,7 +133,7 @@ body {
 // Download item styles
 .download-item {
   border-bottom: $border-width solid $border-color;
-  padding: $spacing-md 0;
+  padding: $spacing-sm 0;
   
   &:last-child {
     border-bottom: none;
@@ -142,13 +142,14 @@ body {
   .download-name {
     font-weight: $font-weight-bold;
     margin-bottom: $spacing-xs;
+    font-size: 0.8rem;
   }
   
   .download-meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: $secondary-color;
     margin-top: $spacing-xs;
   }
@@ -177,8 +178,8 @@ body {
 
 // Progress bar custom styling
 .progress {
-  height: 6px;
-  border-radius: 3px;
+  height: 4px; // Thinner progress bar
+  border-radius: 2px;
   overflow: hidden;
   margin: $spacing-xs 0;
   background-color: darken($light-color, 5%);
@@ -201,11 +202,11 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 30px;
+  height: 26px; // Reduced from 30px
   border-top: $border-width solid $border-color;
   padding: 0 $spacing-md;
   background-color: $light-color;
-  font-size: 0.8rem;
+  font-size: 0.75rem; // Reduced from 0.8rem
   color: $secondary-color;
   
   .status-item {

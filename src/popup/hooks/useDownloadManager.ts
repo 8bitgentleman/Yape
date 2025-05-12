@@ -20,7 +20,6 @@ export function useDownloadManager(state: State | null) {
    * Immediate data refresh (no debounce)
    */
   const refreshDataImmediate = useCallback(async () => {
-    console.log('[DEBUG] Starting refreshDataImmediate');
     if (!state) {
       let errorMessage = 'No state available';
       // console.log('[DEBUG] No state available, aborting refresh');
@@ -39,7 +38,6 @@ export function useDownloadManager(state: State | null) {
       
       const client = new PyloadClient(state.settings.connection);
       
-      console.log('[DEBUG] Checking server status...');
       // Get server status to check connection
       const statusResponse = await client.getServerStatus();
       
@@ -52,34 +50,21 @@ export function useDownloadManager(state: State | null) {
         return;
       }
       
-      console.log('[DEBUG] Server connection successful');
 
       // Get both data sources for the most complete view
-      console.log('[DEBUG] Getting download status data...');
       const downloadsResponse = await client.getStatusDownloads();
       
-      console.log('[DEBUG] statusDownloads response success:', downloadsResponse.success);
-      console.log('[DEBUG] statusDownloads response has data:', !!downloadsResponse.data);
-      if (downloadsResponse.data) {
-        console.log('[DEBUG] statusDownloads data type:', typeof downloadsResponse.data);
-        console.log('[DEBUG] statusDownloads data is array:', Array.isArray(downloadsResponse.data));
-        if (Array.isArray(downloadsResponse.data)) {
-          console.log('[DEBUG] statusDownloads data length:', downloadsResponse.data.length);
-        }
-      }
+      // if (downloadsResponse.data) {
+      //   console.log('[DEBUG] statusDownloads data type:', typeof downloadsResponse.data);
+      //   console.log('[DEBUG] statusDownloads data is array:', Array.isArray(downloadsResponse.data));
+      //   if (Array.isArray(downloadsResponse.data)) {
+      //     console.log('[DEBUG] statusDownloads data length:', downloadsResponse.data.length);
+      //   }
+      // }
       
-      console.log('[DEBUG] Getting queue data...');
       const queueResponse = await client.getQueueData();
       
-      console.log('[DEBUG] queueData response success:', queueResponse.success);
-      console.log('[DEBUG] queueData response has data:', !!queueResponse.data);
-      if (queueResponse.data) {
-        console.log('[DEBUG] queueData data type:', typeof queueResponse.data);
-        console.log('[DEBUG] queueData data is array:', Array.isArray(queueResponse.data));
-        if (Array.isArray(queueResponse.data)) {
-          console.log('[DEBUG] queueData data length:', queueResponse.data.length);
-        }
-      }
+      
       
       // Combine data from both sources
       const allTasks: DownloadTask[] = [];
@@ -88,7 +73,7 @@ export function useDownloadManager(state: State | null) {
       // First add tasks from statusDownloads
       if (downloadsResponse.success && downloadsResponse.data) {
         const tasksCount = Array.isArray(downloadsResponse.data) ? downloadsResponse.data.length : 'not an array';
-        console.log(`[DEBUG] Got ${tasksCount} tasks from statusDownloads`);
+
         if (Array.isArray(downloadsResponse.data)) {
           allTasks.push(...downloadsResponse.data);
         } else {
@@ -99,34 +84,26 @@ export function useDownloadManager(state: State | null) {
       // Then add tasks from queueData, avoiding duplicates
       if (queueResponse.success && queueResponse.data) {
         const tasksCount = Array.isArray(queueResponse.data) ? queueResponse.data.length : 'not an array';
-        console.log(`[DEBUG] Got ${tasksCount} tasks from queueData`);
         
         if (Array.isArray(queueResponse.data)) {
           queueResponse.data.forEach((queueTask, index) => {
-            console.log(`[DEBUG] Processing queue task ${index}:`, queueTask);
             // Check if task with same ID already exists
             const existingTask = allTasks.find(task => task.id === queueTask.id);
             if (!existingTask) {
-              console.log(`[DEBUG] Adding new task from queue: ${queueTask.name || 'unnamed'}`);
               allTasks.push(queueTask);
-            } else {
-              console.log(`[DEBUG] Task already exists: ${queueTask.name || 'unnamed'}`);
-            }
+            } 
           });
         } else {
           console.warn('[DEBUG] queueResponse.data is not an array!');
         }
       }
-      
-      console.log('[DEBUG] Final combined tasks count:', allTasks.length);
-      console.log('[DEBUG] Final combined tasks:', allTasks);
+
       
       // Separate into active and completed
       const active: DownloadTask[] = [];
       const completed: DownloadTask[] = [];
         
       // Process all tasks to categorize them
-      console.log('[DEBUG] Starting to categorize tasks, total tasks:', allTasks.length);
       
       if (allTasks.length === 0) {
         console.log('[DEBUG] No tasks found in either API call');
@@ -168,7 +145,6 @@ export function useDownloadManager(state: State | null) {
           }
         });
         
-        console.log(`[DEBUG] Final categorization - Active: ${active.length}, Completed: ${completed.length}`);
         
         // Update state with processed tasks
         setActiveTasks(active);
@@ -202,7 +178,7 @@ export function useDownloadManager(state: State | null) {
   const refreshData = useCallback(
     debounce(() => { 
       refreshDataImmediate();
-    }, 300), 
+    }, 150), // Reduced from 300ms for more responsive updates
     [refreshDataImmediate]
   );
 
@@ -266,32 +242,67 @@ export function useDownloadManager(state: State | null) {
     if (!state || completedTasks.length === 0) return;
     
     try {
-      console.log('[DEBUG] Clearing all completed tasks');
       setDataLoading(true);
       const client = new PyloadClient(state.settings.connection);
       
       // Use the efficient API call to clear all finished tasks at once
       const response = await client.clearFinishedTasks();
-      console.log('[DEBUG] clearFinishedTasks response:', response);
       
       if (response.success) {
         // Clear the completed tasks list locally
         setCompletedTasks([]);
         
-        // Show notification of success
-        chrome.notifications.create('', {
-          type: 'basic',
-          title: 'PyLoad Downloads',
-          message: `Successfully cleared ${completedTasks.length} completed download(s)`,
-          iconUrl: './images/icon_128.png',
-        });
+        // Ensure the notification setting exists (for backward compatibility)
+        if (state.settings.notifications && state.settings.notifications.onClearCompleted === undefined) {
+          state.settings.notifications.onClearCompleted = true;
+        }
+        
+        // Show notification of success if enabled in settings
+        if (state.settings.notifications?.enabled && 
+            state.settings.notifications?.onClearCompleted !== undefined && 
+            state.settings.notifications?.onClearCompleted) {
+          chrome.notifications.create('', {
+            type: 'basic',
+            title: 'PyLoad Downloads',
+            message: `Successfully cleared ${completedTasks.length} completed download(s)`,
+            iconUrl: './images/icon_128.png',
+          });
+        }
         
         // Refresh data to ensure UI is synced with server
         refreshDataImmediate();
       } else {
         console.error('[DEBUG] Failed to clear completed tasks:', response.message);
         
-        // Show error notification
+        // Ensure the notification setting exists (for backward compatibility)
+        if (state.settings.notifications && state.settings.notifications.onClearCompleted === undefined) {
+          state.settings.notifications.onClearCompleted = true;
+        }
+        
+        // Show error notification if enabled
+        if (state.settings.notifications?.enabled && 
+            state.settings.notifications?.onClearCompleted !== undefined && 
+            state.settings.notifications?.onClearCompleted) {
+          chrome.notifications.create('', {
+            type: 'basic',
+            title: 'Error',
+            message: 'Failed to clear completed downloads',
+            iconUrl: './images/icon_128.png',
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[DEBUG] Exception in clearCompletedTasks:', err);
+      
+      // Ensure the notification setting exists (for backward compatibility)
+      if (state.settings.notifications && state.settings.notifications.onClearCompleted === undefined) {
+        state.settings.notifications.onClearCompleted = true;
+      }
+      
+      // Show error notification if enabled
+      if (state.settings.notifications?.enabled && 
+          state.settings.notifications?.onClearCompleted !== undefined && 
+          state.settings.notifications?.onClearCompleted) {
         chrome.notifications.create('', {
           type: 'basic',
           title: 'Error',
@@ -299,16 +310,6 @@ export function useDownloadManager(state: State | null) {
           iconUrl: './images/icon_128.png',
         });
       }
-    } catch (err) {
-      console.error('[DEBUG] Exception in clearCompletedTasks:', err);
-      
-      // Show error notification
-      chrome.notifications.create('', {
-        type: 'basic',
-        title: 'Error',
-        message: 'Failed to clear completed downloads',
-        iconUrl: './images/icon_128.png',
-      });
     } finally {
       setDataLoading(false);
     }
@@ -384,6 +385,74 @@ export function useDownloadManager(state: State | null) {
     }
   };
 
+  // Add special interval for active downloads to update progress bars
+  useEffect(() => {
+    // If we have active downloads, set up a more frequent refresh interval for progress
+    if (activeTasks.length > 0 && state) {
+      
+      // Log initial download status for debugging
+      activeTasks.forEach((task, index) => {
+        console.log(`[DEBUG] Active task ${index}: ${task.name}, Status: ${task.status}, Progress: ${task.percent}%, Speed: ${task.speed}`);
+      });
+      
+      // Create an interval that refreshes more frequently than the main refresh
+      const progressInterval = setInterval(() => {
+        // Only refresh if we're not already loading data
+        if (!dataLoading) {
+          
+          // Use direct PyLoad API call for status updates rather than the full refresh
+          if (state?.settings?.connection) {
+            const client = new PyloadClient(state.settings.connection);
+            
+            // Use getStatusDownloads as it's specifically for active downloads and lighter
+            client.getStatusDownloads().then(response => {
+              if (response.success && response.data && Array.isArray(response.data)) {
+                
+                // Extract just the necessary data for progress updates
+                const updatedTasks = response.data.map(task => {
+                  return {
+                    id: task.id,
+                    percent: task.percent || 0,
+                    status: task.status,
+                    speed: task.speed || 0
+                  };
+                });
+                
+                // Update only specific properties of active tasks
+                setActiveTasks(prevTasks => {
+                  return prevTasks.map(prevTask => {
+                    const update = updatedTasks.find(t => t.id === prevTask.id);
+                    if (update) {
+                      
+                      return {
+                        ...prevTask,
+                        percent: update.percent,
+                        status: update.status,
+                        speed: update.speed
+                      };
+                    }
+                    return prevTask;
+                  });
+                });
+                
+                // Update total download speed
+                const totalSpeed = response.data.reduce((total, task) => total + (task.speed || 0), 0);
+                setDownloadSpeed(totalSpeed);
+              }
+            }).catch(err => {
+              console.error('[DEBUG] Error in progress update:', err);
+            });
+          }
+        }
+      }, 1000); // Refresh every second for active downloads
+      
+      // Clean up interval when component unmounts or dependencies change
+      return () => {
+        clearInterval(progressInterval);
+      };
+    }
+  }, [activeTasks.length, state, dataLoading]);
+
   // Check current URL when state changes
   useEffect(() => {
     // Check if we need to request the URL from the active tab when state changes
@@ -401,11 +470,9 @@ export function useDownloadManager(state: State | null) {
     const handleMessage = (message: any) => {
       // Download added notification with package details
       if (message.type === 'download_added') {
-        console.log('Download added, refreshing data...', message);
         
         // If message includes package ID and name, show a notification
         if (message.packageId && message.packageName) {
-          console.log(`Package added: ${message.packageName} (ID: ${message.packageId})`);
           
           // Show a notification
           chrome.notifications.create('', {

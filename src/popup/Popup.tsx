@@ -189,10 +189,16 @@ const Popup: React.FC = () => {
   }, [state, refreshDataImmediate]);
 
   /**
-   * Open options page
+   * Open options page in a popup window instead of a new tab
    */
   const openOptions = () => {
-    chrome.runtime.openOptionsPage();
+    // Open settings in a popup window instead of a new tab
+    chrome.windows.create({
+      url: chrome.runtime.getURL('options.html'),
+      type: 'popup',
+      width: 480,
+      height: 600
+    });
   };
 
   /**
@@ -245,40 +251,16 @@ const Popup: React.FC = () => {
             onAddDownload={handleAddUrl}
             onCancel={() => setShowAddUrlForm(false)}
           />
-        ): (<></>)}
-        {/* {showAddUrlForm ? (
-          <AddUrlForm
-            onAddDownload={handleAddUrl}
-            onCancel={() => setShowAddUrlForm(false)}
-          />
         ) : (
-          <>
-            {canDownloadCurrentPage && currentUrl && (
-              <div className="add-current-page mb-3">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div className="ellipsis me-2" style={{ fontSize: '0.9rem' }}>
-                    {currentUrl}
-                  </div>
-                  <button
-                    className="btn btn-sm btn-primary"
-                    onClick={handleAddCurrentPage}
-                  >
-                    <i className="fas fa-download me-1"></i> Add
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            <DownloadList
-              activeTasks={activeTasks}
-              completedTasks={completedTasks}
-              onRemoveTask={removeTask}
-              onClearCompleted={clearCompletedTasks}
-              showCompleted={state?.settings.ui.showCompleted || false}
-              isLoading={dataLoading}
-            />
-          </>
-        )} */}
+          <DownloadList
+            activeTasks={activeTasks}
+            completedTasks={completedTasks}
+            onRemoveTask={removeTask}
+            onClearCompleted={clearCompletedTasks}
+            showCompleted={state?.settings.ui.showCompleted || false}
+            isLoading={dataLoading}
+          />
+        )}
       </div>
       
       <StatusBar

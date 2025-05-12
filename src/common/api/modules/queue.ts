@@ -9,23 +9,18 @@ export class QueueApiClient extends BaseApiClient {
    * Get queue data with enhanced debugging
    */
   async getQueueData(): Promise<ApiResponse<DownloadTask[]>> {
-    console.log('[DEBUG] Calling getQueueData');
     try {
       const response = await this.request<any>('getQueueData');
-      console.log('[DEBUG] getQueueData response:', response);
       
       if (!response.success || !response.data) {
-        console.log('[DEBUG] No data in getQueueData response');
         return response as ApiResponse<DownloadTask[]>;
       }
       
       // Add detailed logging to help debug response format
-      console.log('[DEBUG] Raw queueData response type:', typeof response.data);
-      console.log('[DEBUG] isArray?', Array.isArray(response.data));
       
-      if (typeof response.data === 'object' && !Array.isArray(response.data)) {
-        console.log('[DEBUG] Object keys:', Object.keys(response.data));
-      }
+      // if (typeof response.data === 'object' && !Array.isArray(response.data)) {
+      //   console.log('[DEBUG] Object keys:', Object.keys(response.data));
+      // }
       
       // Try to log full response structure
       try {
@@ -42,7 +37,6 @@ export class QueueApiClient extends BaseApiClient {
       if (Array.isArray(data) && data.length > 0) {
         // Focus on extracting individual files from nested packages structure
         data.forEach((pkg: any, pkgIndex: number) => {
-          console.log('[DEBUG] Processing package:', pkg.name || `pkg-${pkgIndex}`);
           
           // Check for the links array with files
           if (pkg.links && Array.isArray(pkg.links)) {
@@ -75,7 +69,6 @@ export class QueueApiClient extends BaseApiClient {
                 format_eta: '00:00:00'
               };
               
-              console.log(`[DEBUG] Parsed PyLoad 0.4.9 file: ${task.name}, Status: ${status}, Percent: ${percent}`);
               tasks.push(task);
             });
           }
@@ -139,7 +132,6 @@ export class QueueApiClient extends BaseApiClient {
       
       // Check for PyLoad 8+ format where files are in a different format
       if (data.files && Array.isArray(data.files)) {
-        console.log('[DEBUG] Processing files array from getQueueData');
         data.files.forEach((file: any, index: number) => {
           try {
             // Create a download task from file info
@@ -156,7 +148,6 @@ export class QueueApiClient extends BaseApiClient {
               format_eta: String(file.format_eta || file.estimated_time || '00:00:00')
             };
             
-            console.log(`[DEBUG] Parsed file ${index}:`, task);
             tasks.push(task);
           } catch (e) {
             console.error(`[DEBUG] Failed to parse file ${index}:`, e, file);
@@ -166,7 +157,6 @@ export class QueueApiClient extends BaseApiClient {
       
       // Check for PyLoad8+ format where data itself is the package
       if (!Array.isArray(data) && typeof data === 'object' && data.id && !tasks.length) {
-        console.log('[DEBUG] Processing single package from getQueueData');
         try {
           const task: DownloadTask = {
             id: String(data.id || 'pkg-direct'),
@@ -181,14 +171,12 @@ export class QueueApiClient extends BaseApiClient {
             format_eta: String(data.format_eta || '00:00:00')
           };
           
-          console.log('[DEBUG] Parsed direct package:', task);
           tasks.push(task);
         } catch (e) {
           console.error('[DEBUG] Failed to parse direct package:', e, data);
         }
       }
       
-      console.log('Processed getQueueData tasks:', tasks);
       return {
         success: true,
         data: tasks
@@ -211,14 +199,12 @@ export class QueueApiClient extends BaseApiClient {
   async addPackage(name: string, url: string): Promise<ApiResponse<any>> {
     const safeName = name.replace(/[^a-z0-9._\-]/gi, '_');
     
-    console.log(`Adding package: ${safeName}, URL: ${url}`);
     
     const response = await this.request('addPackage', {
       name: JSON.stringify(safeName),
       links: JSON.stringify([url])
     });
     
-    console.log('Add package response:', response);
     
     return response;
   }
@@ -285,7 +271,6 @@ export class QueueApiClient extends BaseApiClient {
    * @returns API response
    */
   async clearFinishedTasks(): Promise<ApiResponse<boolean>> {
-    console.log('[DEBUG] Clearing all finished tasks');
     try {
       // For PyLoad 0.4.9, we use the deleteFinished API endpoint
       // which removes all finished downloads in one call

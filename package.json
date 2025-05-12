@@ -6,7 +6,8 @@
     "test": "jest",
     "lint": "eslint src/**/*.{ts,tsx} && tsc -p src --noemit",
     "watch": "webpack --watch --config webpack.dev.js",
-    "build": "rm -rf dist && webpack --config webpack.prod.js",
+    "notifier": "terminal-notifier -title 'VSCode' -message 'Build Finished' -sound default -activate 'com.microsoft.VSCode'",
+    "build": "rm -rf dist && webpack --config webpack.prod.js && npm run notifier",
     "zip": "rm -rf addon.zip && zip -r addon.zip dist -i 'dist/*' -i 'icons/*' -i '_locales/*' -i 'manifest.json'"
   },
   "repository": {

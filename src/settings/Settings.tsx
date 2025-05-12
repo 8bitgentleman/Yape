@@ -14,6 +14,7 @@ const Settings: React.FC = () => {
   // State
   const [loading, setLoading] = useState<boolean>(true);
   const [state, setState] = useState<State | null>(null);
+  const [activeTab, setActiveTab] = useState<'connection' | 'interface' | 'notifications' | 'about'>('connection');
   const [saveStatus, setSaveStatus] = useState<{
     message: string;
     type: 'success' | 'error' | 'info' | null;
@@ -41,6 +42,7 @@ const Settings: React.FC = () => {
             onDownloadAdded: true,
             onDownloadCompleted: true,
             onDownloadFailed: true,
+            onClearCompleted: true, // Added new notification type
             soundEnabled: false
           };
           
@@ -217,6 +219,7 @@ const Settings: React.FC = () => {
     onDownloadAdded: boolean;
     onDownloadCompleted: boolean;
     onDownloadFailed: boolean;
+    onClearCompleted: boolean;
     soundEnabled: boolean;
   }) => {
     if (!state) return;
@@ -263,12 +266,12 @@ const Settings: React.FC = () => {
 
   // Render settings form
   return (
-    <div className="container py-4" style={{ margin: '0 auto' }}>
-      <h1 className="mb-4">Yape Settings</h1>
+    <div className="container py-3" style={{ margin: '0 auto' }}>
+      <h1 className="mb-3">Yape Settings</h1>
       
       {/* Save status alert */}
       {saveStatus.type && (
-        <div className={`alert alert-${saveStatus.type} mb-4`} role="alert">
+        <div className={`alert alert-${saveStatus.type} mb-2 py-2`} role="alert">
           {saveStatus.message}
         </div>
       )}
@@ -280,70 +283,113 @@ const Settings: React.FC = () => {
           : connectionStatus.isConnected 
             ? 'alert-warning' 
             : 'alert-danger'
-        } mb-4`}
+        } mb-3 py-2`}
       >
         <strong>Server Status:</strong> {connectionStatus.message}
       </div>
       
-      {/* Connection settings */}
-      <div className="card mb-4">
-        <div className="card-header">
-          <h2 className="h5 card-title mb-0">PyLoad Connection</h2>
-        </div>
-        <div className="card-body">
-          {state && (
-            <ConnectionForm
-              connectionSettings={state.settings.connection}
-              onSave={handleConnectionSettingsChange}
-              onTest={testConnection}
-            />
-          )}
-        </div>
-      </div>
+      {/* Tabs Navigation */}
+      <ul className="nav nav-tabs mb-3">
+        <li className="nav-item">
+          <a 
+            className={`nav-link ${activeTab === 'connection' ? 'active' : ''}`} 
+            href="#"
+            onClick={(e) => { e.preventDefault(); setActiveTab('connection'); }}
+          >
+            <i className="fas fa-server me-1"></i>
+            Connection
+          </a>
+        </li>
+        <li className="nav-item">
+          <a 
+            className={`nav-link ${activeTab === 'interface' ? 'active' : ''}`} 
+            href="#"
+            onClick={(e) => { e.preventDefault(); setActiveTab('interface'); }}
+          >
+            <i className="fas fa-desktop me-1"></i>
+            Interface
+          </a>
+        </li>
+        <li className="nav-item">
+          <a 
+            className={`nav-link ${activeTab === 'notifications' ? 'active' : ''}`} 
+            href="#"
+            onClick={(e) => { e.preventDefault(); setActiveTab('notifications'); }}
+          >
+            <i className="fas fa-bell me-1"></i>
+            Notifications
+          </a>
+        </li>
+        <li className="nav-item">
+          <a 
+            className={`nav-link ${activeTab === 'about' ? 'active' : ''}`} 
+            href="#"
+            onClick={(e) => { e.preventDefault(); setActiveTab('about'); }}
+          >
+            <i className="fas fa-info-circle me-1"></i>
+            About
+          </a>
+        </li>
+      </ul>
       
-      {/* Interface settings */}
-      <div className="card mb-4">
-        <div className="card-header">
-          <h2 className="h5 card-title mb-0">Interface Settings</h2>
-        </div>
-        <div className="card-body">
-          {state && (
-            <InterfaceSettings
-              settings={state.settings.ui}
-              onSave={handleInterfaceSettingsChange}
-            />
-          )}
-        </div>
-      </div>
-      
-      {/* Notification settings */}
-      <div className="card mb-4">
-        <div className="card-header">
-          <h2 className="h5 card-title mb-0">Notification Settings</h2>
-        </div>
-        <div className="card-body">
-          {state && state.settings.notifications && (
-            <NotificationSettings
-              settings={state.settings.notifications}
-              onSave={handleNotificationSettingsChange}
-            />
-          )}
-        </div>
-      </div>
-      
-      {/* About section */}
-      <div className="card">
-        <div className="card-header">
-          <h2 className="h5 card-title mb-0">About</h2>
-        </div>
-        <div className="card-body">
-          <p>
-            Yape is a Chrome extension for PyLoad to easily monitor and add downloads.
-          </p>
-          <p className="mb-0">
-            <small className="text-muted">Version 2</small>
-          </p>
-        </div>
+      {/* Tab Content */}
+      <div className="tab-content">
+        {/* Connection settings */}
+        {activeTab === 'connection' && (
+          <div className="card">
+            <div className="card-body">
+              {state && (
+                <ConnectionForm
+                  connectionSettings={state.settings.connection}
+                  onSave={handleConnectionSettingsChange}
+                  onTest={testConnection}
+                />
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Interface settings */}
+        {activeTab === 'interface' && (
+          <div className="card">
+            <div className="card-body">
+              {state && (
+                <InterfaceSettings
+                  settings={state.settings.ui}
+                  onSave={handleInterfaceSettingsChange}
+                />
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Notification settings */}
+        {activeTab === 'notifications' && (
+          <div className="card">
+            <div className="card-body">
+              {state && state.settings.notifications && (
+                <NotificationSettings
+                  settings={state.settings.notifications}
+                  onSave={handleNotificationSettingsChange}
+                />
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* About section */}
+        {activeTab === 'about' && (
+          <div className="card">
+            <div className="card-body">
+              <p>
+                Yape is a Chrome extension for PyLoad to easily monitor and add downloads.
+              </p>
+              <p className="mb-0">
+                <small className="text-muted">Version 2</small>
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

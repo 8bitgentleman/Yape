@@ -32,6 +32,7 @@ export interface DownloadTask {
   added: number; // timestamp
   percent: number;
   size: number;
+  bytesLoaded?: number; // Actual loaded bytes
   speed: number;
   eta: number;
   format_eta: string;
@@ -52,6 +53,7 @@ export interface State {
       onDownloadAdded: boolean;
       onDownloadCompleted: boolean;
       onDownloadFailed: boolean;
+      onClearCompleted: boolean; // Added new notification type
       soundEnabled: boolean;
     };
   };
