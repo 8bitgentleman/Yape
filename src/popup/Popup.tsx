@@ -54,43 +54,73 @@ const Popup: React.FC = () => {
     clearCompletedTasks();
   };
 
-  // Effect to store badge state when popup opens and restore it when popup closes
+  // Effect to preserve badge count and restore it properly when popup closes
   useEffect(() => {
-    try {
-      console.log('[YAPE] Popup opened, temporarily hiding badge');
+    // Create the beforeunload event handler function
+    const handleBeforeUnload = async () => {
+      console.log('[YAPE-DEBUG] Popup closing, ensuring badge visibility');
       
-      // Get current badge count from storage
-      chrome.storage.local.get(['badgeCount'], (result) => {
-        // Store the current badge count in memory
-        const currentBadgeCount = result.badgeCount;
+      try {
+        // Mark popup as closed
+        await chrome.storage.local.set({ popupOpen: false });
         
-        // Clear the badge while popup is open
-        chrome.action.setBadgeText({ text: '' });
+        // Get the latest badge count from storage before restoring
+        const result = await chrome.storage.local.get(['badgeCount']);
+        const badgeCount = result.badgeCount || 0;
         
-        // Set a flag to indicate the popup is open
-        chrome.storage.local.set({ popupOpen: true });
+        console.log(`[YAPE-DEBUG] Latest badge count on popup close: ${badgeCount}`);
         
-        // When popup closes, restore the badge after a short delay
-        window.onbeforeunload = () => {
-          // Mark popup as closed
-          chrome.storage.local.set({ popupOpen: false });
-          
-          // Request the background script to restore the badge
-          setTimeout(() => {
-            if (currentBadgeCount && currentBadgeCount > 0) {
-              chrome.runtime.sendMessage({ 
-                type: 'restore_badge', 
-                count: currentBadgeCount 
-              }).catch(error => {
-                console.log('[YAPE] Could not send restore_badge message, background may not be ready', error);
-              });
-            }
-          }, 300);
-        };
+        // Request the background script to show the badge if needed
+        if (badgeCount > 0) {
+          try {
+            chrome.runtime.sendMessage({ 
+              type: 'restore_badge', 
+              count: badgeCount 
+            }).catch(error => {
+              console.log('[YAPE-DEBUG] Could not send restore_badge message:', error);
+              
+              // As a fallback, set the badge directly
+              chrome.action.setBadgeText({ text: badgeCount.toString() });
+              chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
+            });
+          } catch (error) {
+            console.error('[YAPE-DEBUG] Error sending badge restore message:', error);
+            
+            // As a fallback, set the badge directly
+            chrome.action.setBadgeText({ text: badgeCount.toString() });
+            chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
+          }
+        }
+        
+        // Also trigger a refresh check in the background
+        chrome.runtime.sendMessage({ type: 'check_for_finished_downloads' }).catch(() => {});
+      } catch (error) {
+        console.error('[YAPE-DEBUG] Error in beforeunload handler:', error);
+      }
+    };
+    
+    try {
+      console.log('[YAPE-DEBUG] Popup opened, recording popup state');
+      
+      // Mark the popup as open
+      chrome.storage.local.set({ popupOpen: true });
+      
+      // When popup closes, handle badge visibility
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      
+      // Also request an immediate check for finished downloads
+      chrome.runtime.sendMessage({ type: 'check_for_finished_downloads' }).catch(error => {
+        console.warn('[YAPE-DEBUG] Error requesting finished downloads check:', error);
       });
     } catch (error) {
-      console.error('[YAPE] Error in badge effect:', error);
+      console.error('[YAPE-DEBUG] Error in badge effect:', error);
     }
+    
+    // Clean up the event listener when the component is unmounted
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      console.log('[YAPE-DEBUG] Cleaned up beforeunload event listener');
+    };
   }, []);
 
   // Load initial state
@@ -178,6 +208,33 @@ const Popup: React.FC = () => {
     };
   }, []);
 
+  // Request a check for finished downloads when popup opens and closes
+  useEffect(() => {
+    try {
+      console.log('[YAPE-DEBUG] Requesting check for finished downloads on popup open');
+      chrome.runtime.sendMessage({ type: 'check_for_finished_downloads' }).catch(error => {
+        console.warn('[YAPE-DEBUG] Error requesting finished downloads check:', error);
+      });
+      
+      // Also request when popup closes
+      const handleBeforeUnload = () => {
+        console.log('[YAPE-DEBUG] Requesting check for finished downloads on popup close');
+        chrome.runtime.sendMessage({ type: 'check_for_finished_downloads' }).catch(error => {
+          console.warn('[YAPE-DEBUG] Error requesting finished downloads check on close:', error);
+        });
+      };
+      
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        console.log('[YAPE-DEBUG] Cleaned up beforeunload event listener for downloads check');
+      };
+    } catch (error) {
+      console.error('[YAPE-DEBUG] Error setting up downloads check:', error);
+    }
+  }, []);
+
   // Effect to refresh data when state changes
   useEffect(() => {
     if (state && state.isLoggedIn) {
@@ -189,7 +246,6 @@ const Popup: React.FC = () => {
       console.log('[DEBUG] State is null, cannot refresh data');
     }
   }, [state, refreshDataImmediate]);
-
   /**
    * Open options page in a popup window instead of a new tab
    */

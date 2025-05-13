@@ -22,7 +22,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
   // Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     // Handle port number conversion
     if (name === 'port') {
       const portValue = parseInt(value, 10);
@@ -32,7 +32,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
       }));
       return;
     }
-    
+
     setSettings(prev => ({
       ...prev,
       [name]: value
@@ -52,71 +52,77 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit}>
-      {/* Protocol */}
+      {/* Protocol and Hostname */}
       <div className="mb-3">
-        <label htmlFor="protocol" className="form-label">Protocol</label>
-        <select
-          id="protocol"
-          name="protocol"
-          className="form-select"
-          value={settings.protocol}
-          onChange={handleChange}
-          required
-        >
-          <option value="http">HTTP</option>
-          <option value="https">HTTPS</option>
-        </select>
-      </div>
-      
-      {/* Hostname */}
-      <div className="mb-3">
-        <label htmlFor="hostname" className="form-label">Hostname</label>
-        <input
-          type="text"
-          id="hostname"
-          name="hostname"
-          className="form-control"
-          value={settings.hostname}
-          onChange={handleChange}
-          placeholder="e.g., 192.168.1.100 or pyload.example.com"
-          required
-        />
-      </div>
-      
-      {/* Port */}
-      <div className="mb-3">
-        <label htmlFor="port" className="form-label">Port</label>
-        <input
-          type="number"
-          id="port"
-          name="port"
-          className="form-control"
-          value={settings.port}
-          onChange={handleChange}
-          min="1"
-          max="65535"
-          placeholder="e.g., 8000"
-          required
-        />
-      </div>
-      
-      {/* Path */}
-      <div className="mb-3">
-        <label htmlFor="path" className="form-label">Path</label>
-        <input
-          type="text"
-          id="path"
-          name="path"
-          className="form-control"
-          value={settings.path}
-          onChange={handleChange}
-          placeholder="e.g., / or /pyload"
-        />
-        <div className="form-text">
-          The base path of the PyLoad instance. Default is /.
+        <div className="d-flex gap-3">
+          <div className="flex-fill">
+            <label htmlFor="protocol" className="form-label">Protocol</label>
+            <select
+              id="protocol"
+              name="protocol"
+              className="form-select"
+              value={settings.protocol}
+              onChange={handleChange}
+              required
+            >
+              <option value="http">HTTP</option>
+              <option value="https">HTTPS</option>
+            </select>
+          </div>
+          <div className="flex-fill">
+            <label htmlFor="hostname" className="form-label">Hostname</label>
+            <input
+              type="text"
+              id="hostname"
+              name="hostname"
+              className="form-control"
+              value={settings.hostname}
+              onChange={handleChange}
+              placeholder="e.g., 192.168.1.100 or pyload.example.com"
+              required
+            />
+          </div>
         </div>
       </div>
-      
+
+      {/* Port and Path */}
+      <div className="mb-3">
+        <div className="d-flex gap-3">
+          <div className="flex-fill">
+            <label htmlFor="port" className="form-label">Port</label>
+            <input
+              type="number"
+              id="port"
+              name="port"
+              className="form-control"
+              value={settings.port}
+              onChange={handleChange}
+              min="1"
+              max="65535"
+              placeholder="e.g., 8000"
+              required
+            />
+          </div>
+          <div className="flex-fill">
+            <label htmlFor="path" className="form-label">Path</label>
+            <input
+              type="text"
+              id="path"
+              name="path"
+              className="form-control"
+              value={settings.path}
+              onChange={handleChange}
+              placeholder="e.g., / or /pyload"
+            />
+            <div className="form-text">
+              The base path of the PyLoad instance. Default is /.
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
       {/* Username */}
       <div className="mb-3">
         <label htmlFor="username" className="form-label">Username</label>
@@ -131,7 +137,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
           required
         />
       </div>
-      
+
       {/* Password */}
       <div className="mb-3">
         <label htmlFor="password" className="form-label">Password</label>
@@ -155,7 +161,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
           </button>
         </div>
       </div>
-      
+
       {/* Buttons */}
       <div className="d-flex justify-content-between">
         <button
@@ -165,7 +171,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
         >
           Test Connection
         </button>
-        
+
         <button
           type="submit"
           className="btn btn-primary"

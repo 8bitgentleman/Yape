@@ -34,7 +34,7 @@ const Settings: React.FC = () => {
     const loadSettings = async () => {
       try {
         const loadedState = await loadState();
-        
+
         // Initialize notification settings if they don't exist yet
         if (!loadedState.settings.notifications) {
           loadedState.settings.notifications = {
@@ -45,13 +45,13 @@ const Settings: React.FC = () => {
             onClearCompleted: true, // Added new notification type
             soundEnabled: false
           };
-          
+
           // Save the initialized state
           await updateState(() => loadedState);
         }
-        
+
         setState(loadedState);
-        
+
         // Test connection if we have connection settings
         if (loadedState.settings.connection.hostname) {
           await testConnection(loadedState.settings.connection);
@@ -75,13 +75,13 @@ const Settings: React.FC = () => {
       isLoggedIn: false,
       message: 'Testing connection...',
     });
-    
+
     try {
       const client = new PyloadClient(connectionSettings);
-      
+
       // Test server status
       const statusResponse = await client.getServerStatus();
-      
+
       if (!statusResponse.success) {
         setConnectionStatus({
           isConnected: false,
@@ -90,10 +90,10 @@ const Settings: React.FC = () => {
         });
         return;
       }
-      
+
       // Try to login
       const loginResponse = await client.login();
-      
+
       if (!loginResponse.success) {
         setConnectionStatus({
           isConnected: true,
@@ -102,14 +102,14 @@ const Settings: React.FC = () => {
         });
         return;
       }
-      
+
       // Successfully connected and logged in
       setConnectionStatus({
         isConnected: true,
         isLoggedIn: true,
         message: 'Successfully connected and logged in',
       });
-      
+
       // Update state with login status
       if (state) {
         updateState((currentState) => ({
@@ -132,10 +132,10 @@ const Settings: React.FC = () => {
    */
   const handleConnectionSettingsChange = async (connectionSettings: ConnectionSettings) => {
     if (!state) return;
-    
+
     try {
       setSaveStatus({ message: 'Saving settings...', type: 'info' });
-      
+
       // Update state
       const updatedState = await updateState((currentState) => ({
         ...currentState,
@@ -144,23 +144,23 @@ const Settings: React.FC = () => {
           connection: connectionSettings,
         },
       }));
-      
+
       setState(updatedState);
-      
+
       // Test connection
       await testConnection(connectionSettings);
-      
+
       setSaveStatus({ message: 'Settings saved successfully', type: 'success' });
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSaveStatus({ message: '', type: null });
       }, 3000);
     } catch (error) {
       console.error('Failed to save connection settings', error);
-      setSaveStatus({ 
-        message: 'Failed to save settings', 
-        type: 'error' 
+      setSaveStatus({
+        message: 'Failed to save settings',
+        type: 'error'
       });
     }
   };
@@ -175,10 +175,10 @@ const Settings: React.FC = () => {
     backgroundCheckInterval: number;
   }) => {
     if (!state) return;
-    
+
     try {
       setSaveStatus({ message: 'Saving settings...', type: 'info' });
-      
+
       // Update state
       const updatedState = await updateState((currentState) => ({
         ...currentState,
@@ -187,26 +187,26 @@ const Settings: React.FC = () => {
           ui: settings,
         },
       }));
-      
+
       setState(updatedState);
-      
+
       setSaveStatus({ message: 'Settings saved successfully', type: 'success' });
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSaveStatus({ message: '', type: null });
       }, 3000);
-      
+
       // If background check interval changed, notify background script to update
-      chrome.runtime.sendMessage({ 
+      chrome.runtime.sendMessage({
         type: 'settings_updated',
         settings: settings
       });
     } catch (error) {
       console.error('Failed to save interface settings', error);
-      setSaveStatus({ 
-        message: 'Failed to save settings', 
-        type: 'error' 
+      setSaveStatus({
+        message: 'Failed to save settings',
+        type: 'error'
       });
     }
   };
@@ -223,10 +223,10 @@ const Settings: React.FC = () => {
     soundEnabled: boolean;
   }) => {
     if (!state) return;
-    
+
     try {
       setSaveStatus({ message: 'Saving settings...', type: 'info' });
-      
+
       // Update state
       const updatedState = await updateState((currentState) => ({
         ...currentState,
@@ -235,26 +235,26 @@ const Settings: React.FC = () => {
           notifications: settings,
         },
       }));
-      
+
       setState(updatedState);
-      
+
       setSaveStatus({ message: 'Settings saved successfully', type: 'success' });
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSaveStatus({ message: '', type: null });
       }, 3000);
-      
+
       // Notify background script that notification settings have changed
-      chrome.runtime.sendMessage({ 
+      chrome.runtime.sendMessage({
         type: 'notification_settings_updated',
         settings: settings
       });
     } catch (error) {
       console.error('Failed to save notification settings', error);
-      setSaveStatus({ 
-        message: 'Failed to save settings', 
-        type: 'error' 
+      setSaveStatus({
+        message: 'Failed to save settings',
+        type: 'error'
       });
     }
   };
@@ -268,31 +268,21 @@ const Settings: React.FC = () => {
   return (
     <div className="container py-3" style={{ margin: '0 auto' }}>
       <h1 className="mb-3">Yape Settings</h1>
-      
+
       {/* Save status alert */}
       {saveStatus.type && (
         <div className={`alert alert-${saveStatus.type} mb-2 py-2`} role="alert">
           {saveStatus.message}
         </div>
       )}
-      
-      {/* Connection status alert */}
-      <div 
-        className={`alert ${connectionStatus.isLoggedIn 
-          ? 'alert-success' 
-          : connectionStatus.isConnected 
-            ? 'alert-warning' 
-            : 'alert-danger'
-        } mb-3 py-2`}
-      >
-        <strong>Server Status:</strong> {connectionStatus.message}
-      </div>
-      
+
+
+
       {/* Tabs Navigation */}
       <ul className="nav nav-tabs mb-3">
         <li className="nav-item">
-          <a 
-            className={`nav-link ${activeTab === 'connection' ? 'active' : ''}`} 
+          <a
+            className={`nav-link ${activeTab === 'connection' ? 'active' : ''}`}
             href="#"
             onClick={(e) => { e.preventDefault(); setActiveTab('connection'); }}
           >
@@ -301,8 +291,8 @@ const Settings: React.FC = () => {
           </a>
         </li>
         <li className="nav-item">
-          <a 
-            className={`nav-link ${activeTab === 'interface' ? 'active' : ''}`} 
+          <a
+            className={`nav-link ${activeTab === 'interface' ? 'active' : ''}`}
             href="#"
             onClick={(e) => { e.preventDefault(); setActiveTab('interface'); }}
           >
@@ -311,8 +301,8 @@ const Settings: React.FC = () => {
           </a>
         </li>
         <li className="nav-item">
-          <a 
-            className={`nav-link ${activeTab === 'notifications' ? 'active' : ''}`} 
+          <a
+            className={`nav-link ${activeTab === 'notifications' ? 'active' : ''}`}
             href="#"
             onClick={(e) => { e.preventDefault(); setActiveTab('notifications'); }}
           >
@@ -321,8 +311,8 @@ const Settings: React.FC = () => {
           </a>
         </li>
         <li className="nav-item">
-          <a 
-            className={`nav-link ${activeTab === 'about' ? 'active' : ''}`} 
+          <a
+            className={`nav-link ${activeTab === 'about' ? 'active' : ''}`}
             href="#"
             onClick={(e) => { e.preventDefault(); setActiveTab('about'); }}
           >
@@ -331,7 +321,7 @@ const Settings: React.FC = () => {
           </a>
         </li>
       </ul>
-      
+
       {/* Tab Content */}
       <div className="tab-content">
         {/* Connection settings */}
@@ -345,10 +335,21 @@ const Settings: React.FC = () => {
                   onTest={testConnection}
                 />
               )}
+              {/* Connection status alert */}
+              <div
+                className={`alert ${connectionStatus.isLoggedIn
+                  ? 'alert-success'
+                  : connectionStatus.isConnected
+                    ? 'alert-warning'
+                    : 'alert-danger'
+                  } mb-3 py-2`}
+              >
+                <strong>Server Status:</strong> {connectionStatus.message}
+              </div>
             </div>
           </div>
         )}
-        
+
         {/* Interface settings */}
         {activeTab === 'interface' && (
           <div className="card">
@@ -362,7 +363,7 @@ const Settings: React.FC = () => {
             </div>
           </div>
         )}
-        
+
         {/* Notification settings */}
         {activeTab === 'notifications' && (
           <div className="card">
@@ -376,7 +377,7 @@ const Settings: React.FC = () => {
             </div>
           </div>
         )}
-        
+
         {/* About section */}
         {activeTab === 'about' && (
           <div className="card">

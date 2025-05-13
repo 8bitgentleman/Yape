@@ -199,14 +199,68 @@ export class QueueApiClient extends BaseApiClient {
   async addPackage(name: string, url: string): Promise<ApiResponse<any>> {
     const safeName = name.replace(/[^a-z0-9._\-]/gi, '_');
     
+    console.log(`[YAPE-DEBUG] Adding package ${safeName} with URL ${url}`);
     
-    const response = await this.request('addPackage', {
-      name: JSON.stringify(safeName),
-      links: JSON.stringify([url])
-    });
-    
-    
-    return response;
+    try {
+      // Try with both parameters JSON-encoded first (most common PyLoad format)
+      const response = await this.request('addPackage', {
+        name: JSON.stringify(safeName),
+        links: JSON.stringify([url])
+      });
+      
+      console.log(`[YAPE-DEBUG] addPackage response:`, response);
+      
+      // If the request failed, try with name not JSON-encoded
+      if (!response.success) {
+        console.log(`[YAPE-DEBUG] First attempt failed, trying with regular name...`);
+        
+        const altResponse = await this.request('addPackage', {
+          name: safeName,
+          links: JSON.stringify([url])
+        });
+        
+        console.log(`[YAPE-DEBUG] Alternative addPackage response:`, altResponse);
+        
+        // If that worked, return it
+        if (altResponse.success) {
+          return altResponse;
+        }
+        
+        // Try with destination parameter (PyLoad 0.4.9 and earlier need this)
+        console.log(`[YAPE-DEBUG] Second attempt failed, trying with dest parameter...`);
+        const legacyResponse = await this.request('addPackage', {
+          name: safeName,
+          links: JSON.stringify([url]),
+          dest: 1 // 1 = Queue in older PyLoad versions
+        });
+        
+        console.log(`[YAPE-DEBUG] Legacy addPackage response:`, legacyResponse);
+        
+        // If that failed, try one more approach with dest and JSON name
+        if (!legacyResponse.success) {
+          console.log(`[YAPE-DEBUG] Third attempt failed, trying with dest parameter and JSON name...`);
+          const finalAttempt = await this.request('addPackage', {
+            name: JSON.stringify(safeName),
+            links: JSON.stringify([url]),
+            dest: 1
+          });
+          
+          console.log(`[YAPE-DEBUG] Final addPackage attempt response:`, finalAttempt);
+          return finalAttempt;
+        }
+        
+        return legacyResponse;
+      }
+      
+      return response;
+    } catch (error) {
+      console.error(`[YAPE-DEBUG] Error adding package:`, error);
+      return {
+        success: false,
+        error: 'request-failed',
+        message: error instanceof Error ? error.message : 'Failed to add package'
+      };
+    }
   }
 
   /**
@@ -218,42 +272,76 @@ export class QueueApiClient extends BaseApiClient {
     try {
       // First, try to stop the download if it's running
       // PyLoad requires stopping downloads before deleting them
-      const stopResponse = await this.request<boolean>('stopDownloads', {
-        fids: JSON.stringify([id])
-      });
-      
-      console.log(`[DEBUG] Stop download response:`, stopResponse);
-      
-      // Wait a short delay to ensure the download is stopped
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Now attempt to delete the file
-      const deleteResponse = await this.request<boolean>('deleteFiles', {
-        fids: JSON.stringify([id])
-      });
-      
-      console.log(`[DEBUG] Delete files response:`, deleteResponse);
-      
-      // If deleting the file didn't work, try with deletePackages as a fallback
-      if (!deleteResponse.success) {
-        console.log(`[DEBUG] Trying deletePackages as fallback...`);
-        const packageResponse = await this.request<boolean>('deletePackages', {
-          pids: JSON.stringify([id])
+      try {
+        const stopResponse = await this.request<boolean>('stopDownloads', {
+          fids: JSON.stringify([id])
         });
         
-        console.log(`[DEBUG] Delete packages response:`, packageResponse);
-        
-        return {
-          success: packageResponse.success,
-          data: packageResponse.success,
-          message: packageResponse.success ? 'Successfully removed task' : 'Failed to remove task'
-        };
+        console.log(`[DEBUG] Stop download response:`, stopResponse);
+      } catch (stopError) {
+        // Log but don't fail if stopping fails - some PyLoad versions might not need this step
+        console.warn(`[DEBUG] Error stopping download (continuing anyway):`, stopError);
       }
       
+      // Wait a short delay to ensure the download is stopped
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Try multiple methods to delete the task, as different PyLoad versions have different APIs
+      let deleteSuccess = false;
+      
+      // First attempt: Try deleteFiles (most common for file tasks)
+      try {
+        const deleteResponse = await this.request<boolean>('deleteFiles', {
+          fids: JSON.stringify([id])
+        });
+        
+        console.log(`[DEBUG] Delete files response:`, deleteResponse);
+        if (deleteResponse.success) {
+          deleteSuccess = true;
+        }
+      } catch (deleteError) {
+        console.warn(`[DEBUG] Error deleting file (trying next method):`, deleteError);
+      }
+      
+      // Second attempt: Try deletePackages if we haven't succeeded yet
+      if (!deleteSuccess) {
+        try {
+          console.log(`[DEBUG] Trying deletePackages as fallback...`);
+          const packageResponse = await this.request<boolean>('deletePackages', {
+            pids: JSON.stringify([id])
+          });
+          
+          console.log(`[DEBUG] Delete packages response:`, packageResponse);
+          if (packageResponse.success) {
+            deleteSuccess = true;
+          }
+        } catch (packageError) {
+          console.warn(`[DEBUG] Error deleting package (trying next method):`, packageError);
+        }
+      }
+      
+      // Third attempt: Try delete directly (some PyLoad versions use this)
+      if (!deleteSuccess) {
+        try {
+          console.log(`[DEBUG] Trying direct 'delete' method as final fallback...`);
+          const directResponse = await this.request<boolean>('delete', {
+            id: id
+          });
+          
+          console.log(`[DEBUG] Direct delete response:`, directResponse);
+          if (directResponse.success) {
+            deleteSuccess = true;
+          }
+        } catch (directError) {
+          console.warn(`[DEBUG] Error with direct delete method:`, directError);
+        }
+      }
+      
+      // Return result based on whether any delete method worked
       return {
-        success: deleteResponse.success,
-        data: deleteResponse.success,
-        message: deleteResponse.success ? 'Successfully removed task' : 'Failed to remove task'
+        success: deleteSuccess,
+        data: deleteSuccess,
+        message: deleteSuccess ? 'Successfully removed task' : 'Failed to remove task'
       };
     } catch (error) {
       console.error(`[DEBUG] Error removing task with ID ${id}:`, error);

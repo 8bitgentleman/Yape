@@ -42,8 +42,23 @@ export class BaseApiClient {
   ): Promise<ApiResponse<T>> {
     const { method = 'POST', timeout = this.defaultTimeout } = options;
     
+    console.log(`[YAPE-DEBUG] Making API request to ${endpoint}`, {
+      method, 
+      params: JSON.stringify(params, null, 2)
+    });
+    
     // Prepare URL and query parameters
-    const url = new URL(`${this.baseUrl}/api/${endpoint}`);
+    let url: URL;
+    try {
+      url = new URL(`${this.baseUrl}/api/${endpoint}`);
+    } catch (error) {
+      console.error(`[YAPE-DEBUG] Invalid URL: ${this.baseUrl}/api/${endpoint}`, error);
+      return {
+        success: false,
+        error: 'connection-error',
+        message: `Invalid server URL: ${this.baseUrl}/api/${endpoint}`
+      };
+    }
     
     if (method === 'GET') {
       Object.entries(params).forEach(([key, value]) => {
@@ -61,6 +76,8 @@ export class BaseApiClient {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
+      // Add credentials to send cookies
+      credentials: 'include'
     };
 
     // Add body for POST requests
@@ -76,6 +93,7 @@ export class BaseApiClient {
       });
       
       requestInit.body = formData;
+      console.log(`[YAPE-DEBUG] POST body:`, Object.fromEntries(formData.entries()));
     }
 
     try {

@@ -7,8 +7,7 @@
     "contextMenus",
     "storage",
     "notifications",
-    "http://*/*",
-    "https://*/*"
+    "scripting"
   ],
   "host_permissions": ["http://*/", "https://*/"],
   "action": {

@@ -28,6 +28,8 @@ We've made significant progress on modernizing the Yape Chrome extension:
    - Ensuring consistent behavior across different PyLoad API versions
    - Handling edge cases in service worker lifecycle
    - Maintaining state synchronization between popup and background script
+   - Badge persistence issues when popup is opened/closed
+   - Right-click context menu sometimes not working properly
 
 ## Original Project Overview
 
@@ -108,35 +110,6 @@ PyLoad exposes a simple HTTP API that allows interacting with download tasks. Ke
 - `getConfigValue` - Get a configuration value
 - `setConfigValue` - Set a configuration value
 
-## Current Implementation Status
-
-The modernization has made significant progress:
-
-1. ✅ Core Infrastructure
-   - Project scaffolding with TypeScript, React, and Webpack
-   - Modern PyLoad API client with proper error handling
-   - State management system with type-safe interfaces
-   - Background service with context menu integration
-
-2. ✅ User Interface
-   - Component-based UI for popup and settings pages
-   - Modern UI design based on NAS Download Manager style
-   - Responsive design with loading placeholders
-   - Status bar with connection and speed information
-
-3. ✅ Functionality
-   - Basic download management functionality
-   - Fixed download display issues across PyLoad versions
-   - Added right-click download functionality
-   - Connection testing and configuration
-   - Toast notifications for download actions
-
-4. ✅ Code Quality
-   - Code organization with React hooks and custom components
-   - Performance optimizations like debounced API calls
-   - Proper error handling throughout the application
-   - Type-safe interfaces for all data structures
-
 ## Technical Preferences
 
 - Use TypeScript for all new code
@@ -159,8 +132,70 @@ The extension is now functional with many key features working well:
 4. ✅ "Clear Finished" functionality works properly
 5. ✅ The extension maintains state across browser sessions
 
-However, we're still experiencing some issues with the display of active download bars in the UI. As well as notificaitons
+However, we're still experiencing some issues:
 
+1. ⚠️ Right-click context menu sometimes doesn't work properly
+2. ⚠️ Badge counter may disappear after opening/closing the popup 
+3. ⚠️ Badge counter occasionally doesn't update correctly when downloads finish or when cleaned up
+
+## Badge Counter Debugging Guide
+
+The badge counter should work as follows:
+
+1. **Badge Appearance**: 
+   - The badge should appear automatically when downloads finish
+   - It should show the count of completed downloads (integer number)
+   - The badge should remain visible until all downloads are cleared
+
+2. **Badge Update Triggers**:
+   - When a download completes, the background script detects this via the periodic check function `checkForFinishedDownloads()`
+   - Finished downloads are counted, and the badge is updated via the `updateBadge()` function
+   - When downloads are cleared/removed, the badge count should decrease or disappear
+
+3. **Badge Persistence**:
+   - The badge should remain visible when the popup is opened and closed
+   - The badge count is stored in `chrome.storage.local` with the key 'badgeCount'
+   - The badge should only be cleared when the count reaches 0
+
+4. **Debug Points to Check**:
+   - Does `checkForFinishedDownloads()` detect completed downloads properly?
+   - Does `updateBadge()` execute when downloads complete?
+   - Is the badge count properly stored in and retrieved from storage?
+   - Is `clearCompletedTasks()` properly updating the badge count when tasks are cleared?
+
+5. **Common Issues**:
+   - Badge being cleared when popup opens but not restored when popup closes
+   - Badge not updating when download status changes
+   - Badge count not being decremented when completed downloads are cleared
+
+## Right-Click Context Menu Debugging Guide
+
+The right-click context menu should work as follows:
+
+1. **Menu Creation**:
+   - The context menu is created in `initializeContextMenus()` function in the background script
+   - It should appear when right-clicking on any link in a webpage
+   - The menu item should be titled "Download with Yape"
+
+2. **Click Handling**:
+   - When clicked, the menu triggers `handleContextMenuClick()` function
+   - This function extracts the URL and sends it to PyLoad via the API
+
+3. **Execution Flow**:
+   - Check server status → Login → Check URL validity → Add package for download
+   - Each step has proper error handling
+
+4. **Debug Points to Check**:
+   - Is the context menu being registered properly during extension initialization?
+   - Is the click event being captured and logged?
+   - Are there any errors during any step of the execution flow?
+   - Does the API client properly format the request to PyLoad?
+
+5. **Common Issues**:
+   - Context menu not appearing in certain contexts
+   - Click event not being transmitted to the handler
+   - API request failing due to parameter formatting issues
+   - No visual feedback to the user when right-click download is attempted
 
 ## Communication Guidelines
 
@@ -172,6 +207,6 @@ When making changes or suggesting improvements:
 - If replacing existing functionality, explain how the new approach is better
 
 ## Next steps 
-Review the app with `read_multiple_files` 
+Review the app with `read_multiple_files` and then fix current bugs related to badge persistence and right-click functionality. You can use `edit_file` after you've reviewed
 
 Please help maintain the high quality of this codebase by focusing on simplicity, maintainability, and robustness. The key goal is to create a modern, reliable Chrome extension that provides a better user experience than the original while maintaining all functionality.
