@@ -2,6 +2,17 @@
 @import "~bootstrap/scss/bootstrap";
 @import "~@fortawesome/fontawesome-free/css/all.css";
 
+// Override Bootstrap CSS custom properties for dark theme
+:root {
+  --bs-body-bg: #{$background-color};
+  --bs-body-color: #{$dark-color};
+  --bs-border-color: #{$border-color};
+  --bs-secondary-bg: #{lighten($background-color, 5%)};
+  --bs-tertiary-bg: #{lighten($background-color, 10%)};
+  --bs-emphasis-color: #{$dark-color};
+  --bs-secondary-color: #{$secondary-color};
+}
+
 body {
   font-family: $font-family-base;
   font-size: $font-size-base;
@@ -17,7 +28,7 @@ body {
   max-height: 600px;
   overflow-y: auto;
   overflow-x: hidden;
-  background-color: white;
+  background-color: $background-color;
 }
 .settings#root{
   width: 100%;
@@ -85,11 +96,11 @@ body {
   font-size: 1rem;
 
   &:hover {
-    background-color: $light-color;
+    background-color: lighten($light-color, 10%);
   }
 
   &:active {
-    background-color: darken($light-color, 5%);
+    background-color: lighten($light-color, 5%);
   }
 
   &.active {
@@ -182,10 +193,11 @@ body {
   border-radius: 2px;
   overflow: hidden;
   margin: $spacing-xs 0;
-  background-color: darken($light-color, 5%);
+  background-color: lighten($background-color, 10%);
   
   .progress-bar {
     border-radius: 3px;
+    background-color: $primary-color;
   }
   
   .progress-bar-success {
@@ -205,7 +217,7 @@ body {
   height: 26px; // Reduced from 30px
   border-top: $border-width solid $border-color;
   padding: 0 $spacing-md;
-  background-color: $light-color;
+  background-color: lighten($background-color, 5%);
   font-size: 0.75rem; // Reduced from 0.8rem
   color: $secondary-color;
   
@@ -221,7 +233,7 @@ body {
 
 // Add page modal styles
 .url-input-area {
-  background-color: $light-color;
+  background-color: lighten($background-color, 5%);
   border-radius: $border-radius;
   padding: $spacing-md;
   margin-bottom: $spacing-md;
@@ -234,6 +246,8 @@ body {
     font-size: 0.9rem;
     margin-bottom: $spacing-sm;
     resize: none;
+    background-color: $background-color;
+    color: $dark-color;
     
     &:focus {
       outline: none;
@@ -248,7 +262,7 @@ body {
   max-height: 150px;
   overflow-y: auto;
   margin-bottom: $spacing-md;
-  background-color: white;
+  background-color: $background-color;
   
   .folder-item {
     padding: $spacing-sm $spacing-md;
@@ -257,7 +271,7 @@ body {
     align-items: center;
     
     &:hover {
-      background-color: $light-color;
+      background-color: lighten($background-color, 10%);
     }
     
     .folder-icon {
@@ -312,6 +326,116 @@ body {
   }
   100% {
     opacity: 0.6;
+  }
+}
+
+// Bootstrap component overrides for dark theme
+.form-control,
+.form-select {
+  background-color: $background-color;
+  border-color: $border-color;
+  color: $dark-color;
+  
+  &:focus {
+    background-color: $background-color;
+    border-color: $primary-color;
+    color: $dark-color;
+    box-shadow: 0 0 0 0.2rem rgba($primary-color, 0.25);
+  }
+  
+  &::placeholder {
+    color: $secondary-color;
+  }
+}
+
+.btn {
+  &.btn-outline-secondary {
+    color: $secondary-color;
+    border-color: $border-color;
+    
+    &:hover {
+      background-color: $surface-color;
+      border-color: $border-color;
+      color: $dark-color;
+    }
+  }
+}
+
+.alert {
+  &.alert-danger {
+    background-color: rgba($danger-color, 0.1);
+    border-color: rgba($danger-color, 0.3);
+    color: lighten($danger-color, 20%);
+  }
+  
+  &.alert-success {
+    background-color: rgba($success-color, 0.1);
+    border-color: rgba($success-color, 0.3);
+    color: lighten($success-color, 20%);
+  }
+  
+  &.alert-warning {
+    background-color: rgba($warning-color, 0.1);
+    border-color: rgba($warning-color, 0.3);
+    color: darken($warning-color, 20%);
+  }
+  
+  &.alert-info {
+    background-color: rgba($info-color, 0.1);
+    border-color: rgba($info-color, 0.3);
+    color: lighten($info-color, 20%);
+  }
+}
+
+.dropdown-menu {
+  background-color: $background-color;
+  border-color: $border-color;
+  
+  .dropdown-item {
+    color: $dark-color;
+    
+    &:hover,
+    &:focus {
+      background-color: lighten($background-color, 10%);
+      color: $dark-color;
+    }
+    
+    &.active {
+      background-color: $primary-color;
+      color: white;
+    }
+  }
+  
+  .dropdown-divider {
+    border-color: $border-color;
+  }
+}
+
+.modal {
+  .modal-content {
+    background-color: $background-color;
+    border-color: $border-color;
+    color: $dark-color;
+  }
+  
+  .modal-header {
+    border-bottom-color: $border-color;
+  }
+  
+  .modal-footer {
+    border-top-color: $border-color;
+  }
+}
+
+.card {
+  background-color: $background-color;
+  border-color: $border-color;
+  color: $dark-color;
+  
+  .card-header,
+  .card-footer {
+    background-color: lighten($background-color, 5%);
+    border-color: $border-color;
   }
 }
 
