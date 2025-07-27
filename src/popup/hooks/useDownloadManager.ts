@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { PyloadClient } from '../../common/api/client';
 import { DownloadTask, State, TaskStatus } from '../../common/types';
 import { configValueToBoolean } from '../../common/utils/config';
@@ -15,14 +15,41 @@ export function useDownloadManager(state: State | null) {
   const [downloadSpeed, setDownloadSpeed] = useState<number>(0);
   const [uploadSpeed, setUploadSpeed] = useState<number>(0);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  
+  // Refs to track previous state and prevent unnecessary updates
+  const prevActiveTasksRef = useRef<DownloadTask[]>([]);
+  const prevCompletedTasksRef = useRef<DownloadTask[]>([]);
+  const isRefreshingRef = useRef<boolean>(false);
+
+  // Helper function to compare task arrays by IDs and relevant properties
+  const tasksEqual = (tasks1: DownloadTask[], tasks2: DownloadTask[]): boolean => {
+    if (tasks1.length !== tasks2.length) return false;
+    
+    for (let i = 0; i < tasks1.length; i++) {
+      const task1 = tasks1[i];
+      const task2 = tasks2[i];
+      
+      // Compare essential properties that would cause visual changes
+      if (task1.id !== task2.id || 
+          task1.name !== task2.name ||
+          task1.percent !== task2.percent ||
+          task1.status !== task2.status ||
+          task1.speed !== task2.speed ||
+          task1.size !== task2.size) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   /**
    * Immediate data refresh (no debounce)
    */
   const refreshDataImmediate = useCallback(async () => {
-    if (!state) return;
+    if (!state || isRefreshingRef.current) return;
     
     try {
+      isRefreshingRef.current = true;
       setDataLoading(true);
       
       const client = new PyloadClient(state.settings.connection);
@@ -59,9 +86,15 @@ export function useDownloadManager(state: State | null) {
       }
       
       if (allTasks.length === 0) {
-        // Clear existing tasks since we didn't find any
-        setActiveTasks([]);
-        setCompletedTasks([]);
+        // Only clear if we previously had tasks - prevents unnecessary empty state flashing
+        if (prevActiveTasksRef.current.length > 0) {
+          setActiveTasks([]);
+          prevActiveTasksRef.current = [];
+        }
+        if (prevCompletedTasksRef.current.length > 0) {
+          setCompletedTasks([]);
+          prevCompletedTasksRef.current = [];
+        }
         setDownloadSpeed(0);
       } else {
         const active: DownloadTask[] = [];
@@ -85,9 +118,17 @@ export function useDownloadManager(state: State | null) {
           }
         });
         
-        // Update state with processed tasks
-        setActiveTasks(active);
-        setCompletedTasks(completed);
+        // Only update state if tasks have actually changed
+        if (!tasksEqual(active, prevActiveTasksRef.current)) {
+          setActiveTasks(active);
+          prevActiveTasksRef.current = active;
+        }
+        
+        if (!tasksEqual(completed, prevCompletedTasksRef.current)) {
+          setCompletedTasks(completed);
+          prevCompletedTasksRef.current = completed;
+        }
+        
         setDownloadSpeed(totalDownloadSpeed);
       }
 
@@ -108,6 +149,7 @@ export function useDownloadManager(state: State | null) {
       setIsConnected(false);
     } finally {
       setDataLoading(false);
+      isRefreshingRef.current = false;
     }
   }, [state]);
 
@@ -272,39 +314,33 @@ export function useDownloadManager(state: State | null) {
         console.error('[YAPE-DEBUG] Error sending message to check downloads:', error);
       }
       
-      // Set up auto-refresh if enabled
-      if (state.settings.ui.autoRefresh) {
-        const interval = setInterval(() => {
-          refreshData();
-        }, state.settings.ui.refreshInterval);
-        
-        return () => {
-          clearInterval(interval);
-        };
-      }
     }
   }, [state, refreshData, refreshDataImmediate]);
 
-  // Add special interval for active downloads to update progress bars
+  // Set up refresh interval only when there are active downloads
   useEffect(() => {
-    // If we have active downloads, set up a more frequent refresh interval for progress
-    if (activeTasks.length > 0 && state) {
-      console.log(`[DEBUG] Setting up progress refresh interval for ${activeTasks.length} active downloads`);
+    if (!state || !state.isLoggedIn) return;
+    
+    // Only set up refresh intervals if there are active downloads
+    if (activeTasks.length > 0) {
+      console.log(`[DEBUG] Setting up refresh interval for ${activeTasks.length} active downloads`);
       
-      // Create an interval that refreshes more frequently than the main refresh
-      const progressInterval = setInterval(() => {
-        console.log('[DEBUG] Running progress update interval');
-        // Only refresh if we're not already loading data
+      // Use either the configured refresh interval or 3 seconds, whichever is shorter
+      const refreshRate = Math.min(state.settings.ui.refreshInterval, 3000);
+      
+      const interval = setInterval(() => {
+        console.log('[DEBUG] Running active downloads refresh interval');
         if (!dataLoading) {
           refreshDataImmediate();
         }
-      }, 1000); // Refresh every second for active downloads
+      }, refreshRate);
       
-      // Clean up interval when component unmounts or dependencies change
       return () => {
-        console.log('[DEBUG] Clearing progress refresh interval');
-        clearInterval(progressInterval);
+        console.log('[DEBUG] Clearing active downloads refresh interval');
+        clearInterval(interval);
       };
+    } else {
+      console.log('[DEBUG] No active downloads, not setting up refresh interval');
     }
   }, [activeTasks.length, state, refreshDataImmediate, dataLoading]);
 

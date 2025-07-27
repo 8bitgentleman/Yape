@@ -178,19 +178,7 @@ const Popup: React.FC = () => {
         // Show content early even if not logged in
         setLoading(false);
 
-        // Set up auto-refresh if enabled and logged in
-        if (loadedState.isLoggedIn && loadedState.settings.ui.autoRefresh) {
-          const interval = setInterval(() => {
-            refreshData();
-          }, loadedState.settings.ui.refreshInterval);
-          
-          setRefreshInterval(interval);
-          
-          // Clear interval on unmount
-          return () => {
-            if (interval) clearInterval(interval);
-          };
-        }
+        // Auto-refresh is now handled in useDownloadManager hook
       } catch (err) {
         console.error('Popup initialization error:', err);
       } finally {

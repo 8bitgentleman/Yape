@@ -16,7 +16,7 @@ interface StatusDisplayInfo {
 /**
  * Component to display a single download item
  */
-const DownloadItem: React.FC<DownloadItemProps> = ({
+const DownloadItem: React.FC<DownloadItemProps> = React.memo(({
   task,
   onRemove
 }) => {
@@ -127,6 +127,6 @@ const DownloadItem: React.FC<DownloadItemProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default DownloadItem;
