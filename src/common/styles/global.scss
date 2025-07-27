@@ -280,6 +280,20 @@ body {
   }
 }
 
+// Clickable form sections (for location selector and advanced options)
+.selected-path {
+  border: $border-width solid $border-color;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: $border-radius;
+  background-color: lighten($background-color, 5%);
+  color: $dark-color;
+  
+  &:hover {
+    background-color: lighten($background-color, 10%);
+  }
+}
+
 .action-buttons {
   display: flex;
   justify-content: flex-end;

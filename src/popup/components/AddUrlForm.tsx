@@ -15,6 +15,10 @@ const AddUrlForm: React.FC<AddUrlFormProps> = ({
   const [url, setUrl] = useState<string>('');
   const [selectedPath, setSelectedPath] = useState<string>('default location');
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [ftpUsername, setFtpUsername] = useState<string>('');
+  const [ftpPassword, setFtpPassword] = useState<string>('');
+  const [unzipPassword, setUnzipPassword] = useState<string>('');
   
   // Sample folder paths from your screenshot
   const availablePaths = [
@@ -42,33 +46,58 @@ const AddUrlForm: React.FC<AddUrlFormProps> = ({
             rows={4}
             required
           />
-          
-          <div className="form-row">
-            <input 
-              type="text" 
-              placeholder="FTP username..." 
-              className="form-control mb-2"
-            />
-          </div>
-          
-          <div className="form-row">
-            <input 
-              type="password" 
-              placeholder="FTP password..." 
-              className="form-control mb-2"
-            />
-          </div>
-          
-          <div className="form-row">
-            <input 
-              type="password" 
-              placeholder="Unzip password..." 
-              className="form-control"
-            />
+        </div>
+
+        {/* Advanced Options Toggle */}
+        <div className="advanced-options-toggle mb-3">
+          <div 
+            className="selected-path d-flex justify-content-between align-items-center"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            <div>
+              <i className="fas fa-cog me-2"></i>
+              Advanced Options
+            </div>
+            <i className={`fas fa-chevron-${showAdvanced ? 'up' : 'down'}`}></i>
           </div>
         </div>
-        
-        <div className="download-location">
+
+        {/* Advanced Options Section */}
+        {showAdvanced && (
+          <div className="advanced-options mb-3">
+            <div className="form-row">
+              <input 
+                type="text" 
+                placeholder="FTP username..." 
+                className="form-control mb-2"
+                value={ftpUsername}
+                onChange={(e) => setFtpUsername(e.target.value)}
+              />
+            </div>
+            
+            <div className="form-row">
+              <input 
+                type="password" 
+                placeholder="FTP password..." 
+                className="form-control mb-2"
+                value={ftpPassword}
+                onChange={(e) => setFtpPassword(e.target.value)}
+              />
+            </div>
+            
+            <div className="form-row">
+              <input 
+                type="password" 
+                placeholder="Unzip password..." 
+                className="form-control"
+                value={unzipPassword}
+                onChange={(e) => setUnzipPassword(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+        {/* 
+        <div className="download-location mb-3">
           <div 
             className="selected-path d-flex justify-content-between align-items-center"
             onClick={() => setIsExpanded(!isExpanded)}
@@ -76,10 +105,14 @@ const AddUrlForm: React.FC<AddUrlFormProps> = ({
               border: '1px solid #dee2e6',
               padding: '0.5rem 1rem',
               cursor: 'pointer',
-              borderRadius: '0.25rem'
+              borderRadius: '0.25rem',
+              backgroundColor: selectedPath === 'default location' ? '#f8f9fa' : 'white'
             }}
           >
-            <div>Download to {selectedPath}</div>
+            <div>
+              <i className="fas fa-folder me-2"></i>
+              {selectedPath === 'default location' ? 'Download to default location' : `Download to ${selectedPath}`}
+            </div>
             <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'}`}></i>
           </div>
           
@@ -101,7 +134,7 @@ const AddUrlForm: React.FC<AddUrlFormProps> = ({
             </div>
           )}
         </div>
-        
+         */}
         <div className="action-buttons mt-3">
           <button
             type="button"
