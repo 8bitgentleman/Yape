@@ -9,15 +9,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.log(`[YAPE-DEBUG] Received request to update badge to count: ${message.count}, action: ${message.action || 'unspecified'}`);
       updateBadge(message.count);
     }
-    
+
     // Handle check for finished downloads message
     if (message.type === 'check_for_finished_downloads') {
       console.log('[YAPE-DEBUG] Received request to check for finished downloads');
       // Run a check right away
       checkForFinishedDownloads();
     }
-    
+
     return true; // Keep channel open for async response
+});
+
+// IMPORTANT: Register context menu click listener at the TOP LEVEL of the module
+// This ensures it's available immediately when the service worker wakes up from dormancy.
+// Without this, the first click after dormancy would be lost because the listener
+// wasn't registered yet (it was previously inside initializeContextMenus which runs async).
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  console.log('[YAPE-DEBUG] Context menu click detected (top-level listener):', info);
+  handleContextMenuClick(info, tab);
 });
 
 
@@ -541,12 +550,10 @@ function initializeContextMenus() {
     }, 500);
   }
 
-  // Handle context menu clicks
-  chrome.contextMenus.onClicked.addListener((info, tab) => {
-    console.log('[YAPE-DEBUG] Context menu click detected:', info);
-    handleContextMenuClick(info, tab);
-  });
-  
+  // NOTE: The context menu click listener is now registered at the TOP LEVEL of this module
+  // to ensure it's available immediately when the service worker wakes up from dormancy.
+  // See the chrome.contextMenus.onClicked.addListener near the top of the file.
+
   console.log('[YAPE-DEBUG] Context menu initialization completed');
 }
 
