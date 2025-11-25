@@ -665,43 +665,63 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
         console.log('[YAPE-DEBUG] URL check succeeded:', checkResponse);
       }
       
-      // Generate a package name from the URL or link text
+      // Generate a package name from the URL
       let packageName = '';
-      if (info.selectionText) {
-        // If user selected text, use that as the package name
-        packageName = info.selectionText.trim().replace(/[^a-z0-9._\-\s]/gi, '_').substring(0, 50);
-        console.log('[YAPE-DEBUG] Using selection text for package name:', packageName);
-      } else {
-        // Otherwise use the URL
-        try {
-          const url = new URL(info.linkUrl);
-          // Try to use the pathname as the package name
-          const pathname = url.pathname;
-          if (pathname && pathname !== '/') {
-            // Get the last part of the pathname
-            const parts = pathname.split('/');
-            const lastPart = parts[parts.length - 1];
-            if (lastPart) {
-              packageName = decodeURIComponent(lastPart);
-              console.log('[YAPE-DEBUG] Using pathname for package name:', packageName);
+
+      console.log('[YAPE-DEBUG] Extracting filename from URL:', info.linkUrl);
+      console.log('[YAPE-DEBUG] Selection text:', info.selectionText);
+
+      // Always prefer extracting filename from URL, not link text
+      // Link text can be misleading like "Download Now" or "Click here"
+      try {
+        const url = new URL(info.linkUrl);
+        const pathname = url.pathname;
+
+        if (pathname && pathname !== '/') {
+          // Get the last part of the pathname (the filename)
+          const parts = pathname.split('/').filter(p => p.length > 0);
+          const lastPart = parts[parts.length - 1];
+
+          if (lastPart && lastPart.length > 0) {
+            // Decode URL encoding (e.g., %20 -> space)
+            const decodedPart = decodeURIComponent(lastPart);
+
+            // Check if this looks like a real filename (has an extension)
+            // Common extensions: .mkv, .mp4, .zip, .rar, .pdf, .exe, .iso, etc.
+            const hasExtension = /\.[a-z0-9]{2,4}$/i.test(decodedPart);
+
+            // Check if it looks like a random ID (all random chars, no spaces/dots/dashes in meaningful places)
+            const looksLikeRandomId = /^[a-zA-Z0-9_-]{8,}$/.test(decodedPart) && decodedPart.length < 50;
+
+            if (hasExtension || (!looksLikeRandomId && decodedPart.length > 3)) {
+              // Looks like a real filename or meaningful name
+              packageName = decodedPart;
+              console.log('[YAPE-DEBUG] Extracted filename from URL path:', packageName);
             } else {
-              packageName = url.hostname;
-              console.log('[YAPE-DEBUG] Using hostname for package name:', packageName);
+              // Looks like a random ID, use hostname + ID for context
+              packageName = `${url.hostname}_${decodedPart}`;
+              console.log('[YAPE-DEBUG] Path looks like random ID, using hostname + ID:', packageName);
             }
           } else {
+            // Fallback to hostname if no filename in path
             packageName = url.hostname;
-            console.log('[YAPE-DEBUG] Using hostname for package name:', packageName);
+            console.log('[YAPE-DEBUG] No filename in path, using hostname:', packageName);
           }
-        } catch (error) {
-          // Fallback if URL parsing fails
-          packageName = info.linkUrl.replace(/[^a-z0-9._\-]/gi, '_');
-          console.log('[YAPE-DEBUG] Using raw URL for package name (fallback):', packageName);
+        } else {
+          packageName = url.hostname;
+          console.log('[YAPE-DEBUG] Root path, using hostname:', packageName);
         }
-        
-        // Clean up the package name
-        packageName = packageName.replace(/[^a-z0-9._\-\s]/gi, '_').substring(0, 50);
-        console.log('[YAPE-DEBUG] Final package name:', packageName);
+      } catch (error) {
+        // Fallback if URL parsing fails
+        console.error('[YAPE-DEBUG] Failed to parse URL:', error);
+        packageName = 'download';
+        console.log('[YAPE-DEBUG] Using fallback package name');
       }
+
+      // Clean up the package name - remove invalid characters but keep dots, dashes, underscores
+      // Limit to reasonable length for PyLoad
+      packageName = packageName.replace(/[^a-z0-9._\-\s]/gi, '_').substring(0, 100);
+      console.log('[YAPE-DEBUG] Cleaned package name:', packageName);
       
       // Add package for download
       console.log('[YAPE-DEBUG] Adding package:', packageName, 'with URL:', info.linkUrl);
@@ -714,18 +734,34 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
       }
       
       console.log('[YAPE-DEBUG] Package added successfully:', addResponse.data);
-      
+
       // Store the package ID for tracking
       const packageId = addResponse.data;
-      
+
+      // Use the package name we extracted from the URL for the notification
+      // This is fast and usually accurate since we parse the URL pathname
+      const displayName = packageName;
+      console.log('[YAPE-DEBUG] Using extracted package name for notification:', displayName);
+
+      // Always show a notification that the download was added
+      // Use a unique ID combining timestamp and random number to avoid collisions
+      const notificationId = `download-added-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      console.log('[YAPE-DEBUG] Showing notification for added download:', notificationId);
+      safeCreateNotification(notificationId, {
+        type: 'basic',
+        title: 'Download Added',
+        message: `${displayName}`,
+        iconUrl: './images/icon_128.png',
+      }, 'added');
+
       // Notify popup to refresh downloads with the package ID - handle potential errors
       try {
         // Check if popup is open before sending message
         console.log('[YAPE-DEBUG] Attempting to notify popup of added download...');
-        chrome.runtime.sendMessage({ 
-          type: 'download_added', 
-          packageId: packageId, 
-          packageName: packageName,
+        chrome.runtime.sendMessage({
+          type: 'download_added',
+          packageId: packageId,
+          packageName: displayName,
           url: info.linkUrl
         })
         .then(() => {
@@ -735,44 +771,28 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
           // This will catch the error if popup isn't open
           console.log('[YAPE-DEBUG] Popup not open, storing refresh data for next open:', error);
           // Store details in local storage to refresh on next popup open
-          chrome.storage.local.set({ 
+          chrome.storage.local.set({
             pendingRefresh: true,
             lastAddedPackage: {
               id: packageId,
-              name: packageName,
+              name: displayName,
               url: info.linkUrl,
               timestamp: Date.now()
             }
           });
-          
-          // Show a notification that the download was added
-          safeCreateNotification(`download-added-${Date.now()}`, {
-            type: 'basic',
-            title: 'Download Added',
-            message: `${packageName}`,
-            iconUrl: './images/icon_128.png',
-          }, 'added');
         });
       } catch (error) {
         console.warn('[YAPE-DEBUG] Failed to send message to popup - it might not be open:', error);
         // Store details in local storage to refresh on next popup open
-        await chrome.storage.local.set({ 
+        await chrome.storage.local.set({
           pendingRefresh: true,
           lastAddedPackage: {
             id: packageId,
-            name: packageName,
+            name: displayName,
             url: info.linkUrl,
             timestamp: Date.now()
           }
         });
-        
-        // Show a notification that the download was added
-        safeCreateNotification(`download-added-${Date.now()}`, {
-          type: 'basic',
-          title: 'Download Added',
-          message: `${packageName}`,
-          iconUrl: './images/icon_128.png',
-        }, 'added');
       }
       
       // Show success toast

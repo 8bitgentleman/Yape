@@ -80,4 +80,18 @@ export class PyloadClient {
   async clearFinishedTasks(): Promise<ApiResponse<boolean>> {
     return this.queueClient.clearFinishedTasks();
   }
+
+  /**
+   * Make a raw API request (for advanced usage)
+   * @param endpoint API endpoint
+   * @param params Request parameters
+   * @param options Request options
+   */
+  async request<T>(
+    endpoint: string,
+    params?: Record<string, any>,
+    options?: { method?: 'GET' | 'POST', timeout?: number }
+  ): Promise<ApiResponse<T>> {
+    return this.queueClient['request']<T>(endpoint, params, options);
+  }
 }

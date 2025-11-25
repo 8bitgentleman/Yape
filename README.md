@@ -1,36 +1,21 @@
-# YAPE v2 - Yet Another PyLoad Extension
+# YAPE - Yet Another PyLoad Extension
 
 ![YAPE Logo](./images/icon_128.png)
 
-> **A modern rewrite of the original [YAPE extension](https://github.com/RemiRigal/Yape)** - rebuilt from the ground up with React, TypeScript, and Chrome Manifest V3.
-
-YAPE v2 is a Chrome extension for managing downloads in [PyLoad](https://pyload.net/), a free and open-source download manager. This extension provides a clean, modern interface to monitor your downloads, add new ones, and manage your PyLoad server directly from your browser.
+YAPE is a Chrome extension for managing downloads in PyLoad, a free and open-source download manager. This extension provides a clean, modern interface to monitor your downloads, add new ones, and manage your PyLoad server directly from your browser.
 
 ![Screenshot of YAPE](./images/screenshot-v2.png)
 
-## What's New in v2
-
-This is a **complete rewrite** of the original YAPE extension, featuring:
-
-- 🔧 **Modern Tech Stack**: React 18, TypeScript, Webpack, SCSS
-- 🛡️ **Manifest V3**: Built on Chrome's latest extension platform for better security and performance
-- 🎨 **Redesigned UI**: Clean, responsive interface with Bootstrap 5
-- ⚙️ **Dedicated Settings Page**: Full configuration panel with connection testing
-- 🔔 **Enhanced Notifications**: Configurable alerts with sound support
-- 📊 **Smart Badge System**: Persistent download count tracking
-
 ## Features
 
-- **Real-time Download Monitoring**: Track download progress, speed, and status with live updates
-- **Quick Download Addition**: Add URLs from the popup or right-click context menu
-- **Advanced Download Options**: Support for custom paths, FTP credentials, and unzip passwords
-- **Download Management**: Pause, resume, remove, and clear completed downloads
-- **Smart Notifications**: Configurable browser notifications for added, completed, and failed downloads
-- **Customizable Settings**: Configure connection details, auto-refresh intervals, and notification preferences
+- **Real-time Download Monitoring**: Track download progress, speed, and status in real-time
+- **Quick Download Addition**: Add URLs with a single click from the popup or right-click context menu
+- **Download Management**: Stop, remove, and clear completed downloads
+- **Notifications**: Get browser notifications when downloads complete or fail
+- **Customizable Settings**: Configure connection details, interface behavior, and notification preferences
 - **Speed Limit Control**: Toggle speed limits directly from the extension interface
-- **Badge Notifications**: See the number of completed downloads at a glance (persists across browser restarts)
-- **Connection Testing**: Verify your PyLoad server connection with one click
-- **Direct Web Interface Access**: Open the PyLoad web interface instantly
+- **Badge Notifications**: See the number of completed downloads at a glance
+- **Direct Web Interface Access**: Open the PyLoad web interface with one click
 
 ## Installation
 
@@ -38,7 +23,7 @@ This is a **complete rewrite** of the original YAPE extension, featuring:
 
 ### Manual Installation
 
-1. Download the latest release from the [Releases page](https://github.com/8bitgentleman/Yape/releases)
+1. Download the latest release from the [Releases page](https://github.com/username/yape/releases)
 2. Extract the ZIP file
 3. Open Chrome and navigate to `chrome://extensions/`
 4. Enable "Developer mode" (toggle in the top-right corner)
@@ -85,8 +70,8 @@ Navigate to Settings to customize:
 
 ```bash
 # Clone the repository
-git clone https://github.com/8bitgentleman/Yape.git
-cd Yape
+git clone https://github.com/username/yape.git
+cd yape
 
 # Install dependencies
 npm install
@@ -102,38 +87,28 @@ npm run build
 
 ```
 /src
-├── background/        # Service worker (Manifest V3)
+├── background/        # Background script
 ├── common/            # Shared code
-│   ├── api/           # Modular PyLoad API client
-│   │   ├── modules/   # Auth, Downloads, Queue, Config clients
-│   │   └── client.ts  # Main API entry point
+│   ├── api/           # PyLoad API client
 │   ├── components/    # Shared React components
-│   ├── state/         # Chrome storage state management
-│   ├── styles/        # SCSS styles (Bootstrap customization)
-│   └── utils/         # Utility functions (formatting, etc.)
+│   ├── state/         # State management
+│   ├── styles/        # SCSS styles
+│   └── utils/         # Utility functions
 ├── popup/             # Popup UI
-│   ├── components/    # Download list, forms, status bar
-│   └── hooks/         # useDownloadManager, downloadActions
-└── settings/          # Settings page UI
-    └── components/    # Connection, interface, notification forms
+│   ├── components/    # Popup-specific components
+│   └── hooks/         # Custom React hooks
+└── settings/          # Settings UI
 ```
 
-### Tech Stack
+## Migrating from v1
 
-- **Frontend**: React 18, TypeScript, Bootstrap 5, Font Awesome
-- **Build**: Webpack 5, SCSS, ts-loader
-- **Extension**: Chrome Manifest V3, Chrome Storage API
-- **Testing**: Jest
+YAPE v2 is a complete rewrite of the original extension, with many improvements and new features. If you're upgrading from v1:
 
-## Migrating from the Original YAPE
+1. Uninstall the old version
+2. Install the new version
+3. Reconfigure your server settings
 
-If you're coming from [RemiRigal's original YAPE extension](https://github.com/RemiRigal/Yape):
-
-1. Uninstall the original extension
-2. Install YAPE v2
-3. Reconfigure your PyLoad server settings (the new settings page makes this easy!)
-
-Your existing downloads in PyLoad will continue running - the new extension will pick them up automatically.
+Your existing downloads will continue to be managed by PyLoad, and the new extension will display them.
 
 ## Contributing
 
@@ -152,4 +127,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - [PyLoad](https://pyload.net/) - The awesome download manager that makes this extension possible
-- [RemiRigal/Yape](https://github.com/RemiRigal/Yape) - The original YAPE extension that inspired this rewrite. This project is a fork that has been rebuilt from scratch with a modern tech stack while maintaining the original spirit of simplicity
+- [Original YAPE Extension](https://github.com/RemiRigal/Yape) - For the inspiration
