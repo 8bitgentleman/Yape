@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAPE Download Test Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 2px solid #6c757d;
+            padding-bottom: 8px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+        }
+        .test-item p {
+            margin: 5px 0;
+        }
+        .filename {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .description {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+            padding: 5px 10px;
+            background: #e7f3ff;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        a:hover {
+            background: #007bff;
+            color: white;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+        button:hover {
+            background: #218838;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+        .instructions li {
+            margin: 8px 0;
+            color: #856404;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #e83e8c;
+        }
+    </style>
+</head>
+<body>
+    <h1>YAPE Extension Test Page</h1>
+
+    <div class="instructions">
+        <h3>How to Test the Notification Feature:</h3>
+        <ol>
+            <li>Make sure your YAPE extension is loaded and PyLoad is running</li>
+            <li>Right-click on any download link below</li>
+            <li>Select "Send to PyLoad" from the context menu</li>
+            <li>Check that the notification shows the <strong>actual filename</strong> from PyLoad (not just "Download link" or button text)</li>
+            <li>Open the YAPE popup to verify the download appears with the correct name</li>
+        </ol>
+        <p><strong>Expected Behavior:</strong> The notification should display the real filename that PyLoad extracted from the URL, not the link text or a generated package name.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 1: Direct File Links with Clear Filenames</h2>
+        <p class="description">These links have clear filenames in the URL that PyLoad should extract.</p>
+
+        <div class="test-item">
+            <p class="filename">Expected: ubuntu-22.04.3-desktop-amd64.iso</p>
+            <p><a href="https://releases.ubuntu.com/22.04/ubuntu-22.04.3-desktop-amd64.iso">Download Ubuntu ISO</a></p>
+            <p class="description">Direct ISO file link - filename should be extracted from URL</p>
+        </div>
+
+        <div class="test-item">
+            <p class="filename">Expected: sample.pdf or document name</p>
+            <p><a href="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf">Download Sample PDF</a></p>
+            <p class="description">Direct PDF file link</p>
+        </div>
+
+        <div class="test-item">
+            <p class="filename">Expected: big-buck-bunny or video filename</p>
+            <p><a href="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4">Download Sample Video</a></p>
+            <p class="description">Direct MP4 video file</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 2: Links with Misleading Button Text</h2>
+        <p class="description">The link text doesn't match the actual filename - this tests if YAPE uses the real filename from PyLoad.</p>
+
+        <div class="test-item">
+            <p class="filename">Expected: BigBuckBunny.mp4 (NOT "Click here to download")</p>
+            <p><a href="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4">Click here to download</a></p>
+            <p class="description">Generic button text - should show actual filename in notification</p>
+        </div>
+
+        <div class="test-item">
+            <p class="filename">Expected: dummy.pdf (NOT "Get your free PDF now!")</p>
+            <p><a href="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf">Get your free PDF now!</a></p>
+            <p class="description">Marketing-style button text - should show actual filename</p>
+        </div>
+
+        <div class="test-item">
+            <p class="filename">Expected: Actual file from archive (NOT "Download here")</p>
+            <p><a href="https://speed.hetzner.de/100MB.bin">Download here</a></p>
+            <p class="description">Simple text - should show "100MB.bin"</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 3: Buttons Instead of Links</h2>
+        <p class="description">These are buttons that trigger downloads - testing if extension handles these correctly.</p>
+
+        <div class="test-item">
+            <p class="filename">Expected: dummy.pdf (NOT "Download Now")</p>
+            <button onclick="window.open('https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', '_blank')">Download Now</button>
+            <p class="description">Button that opens a download link</p>
+        </div>
+
+        <div class="test-item">
+            <p class="filename">Expected: 100MB.bin (NOT "Start Download")</p>
+            <button onclick="window.open('https://speed.hetzner.de/100MB.bin', '_blank')">Start Download</button>
+            <p class="description">Another button with generic text</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 4: Archive Links</h2>
+        <p class="description">Common archive formats that PyLoad should recognize.</p>
+
+        <div class="test-item">
+            <p class="filename">Expected: actual .zip filename</p>
+            <p><a href="https://github.com/github/gitignore/archive/refs/heads/main.zip">Download ZIP Archive</a></p>
+            <p class="description">GitHub archive download</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 5: Complex URLs with Parameters</h2>
+        <p class="description">URLs with query parameters - PyLoad should still extract the correct filename.</p>
+
+        <div class="test-item">
+            <p class="filename">Expected: Extracted filename from response headers</p>
+            <p><a href="https://speed.hetzner.de/100MB.bin?test=1&source=yape">Download with Parameters</a></p>
+            <p class="description">URL with query parameters</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Verification Checklist</h2>
+        <div style="background: #e7f3ff; padding: 15px; border-radius: 4px; margin-top: 15px;">
+            <p><strong>For each test case, verify:</strong></p>
+            <ul style="list-style-type: none; padding-left: 0;">
+                <li>✓ The notification appears after right-clicking and selecting "Send to PyLoad"</li>
+                <li>✓ The notification title shows "Download Added"</li>
+                <li>✓ The notification message shows the <strong>actual filename</strong> extracted by PyLoad</li>
+                <li>✓ The notification does NOT show generic text like "Download link" or button text</li>
+                <li>✓ The download appears in the YAPE popup with the correct filename</li>
+                <li>✓ Console logs show the debug messages about fetching actual filename</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Debugging Tips</h2>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 4px;">
+            <p><strong>To see debug logs:</strong></p>
+            <ol>
+                <li>Open Chrome DevTools (F12)</li>
+                <li>Go to the Console tab</li>
+                <li>Look for messages starting with <code>[YAPE-DEBUG]</code></li>
+                <li>You should see logs about fetching queue data and using actual filename</li>
+            </ol>
+            <p style="margin-top: 15px;"><strong>Alternative: Check Service Worker logs:</strong></p>
+            <ol>
+                <li>Go to <code>chrome://extensions/</code></li>
+                <li>Find YAPE extension</li>
+                <li>Click "service worker" link</li>
+                <li>Watch the console for <code>[YAPE-DEBUG]</code> messages</li>
+            </ol>
+        </div>
+    </div>
+
+</body>
+</html>
