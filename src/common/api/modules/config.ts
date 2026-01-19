@@ -2,30 +2,32 @@ import { ApiResponse, PyloadConfigValue } from '../../types';
 import { BaseApiClient } from './base';
 
 /**
- * PyLoad API methods related to configuration
+ * PyLoad-NG API methods related to configuration
  */
 export class ConfigApiClient extends BaseApiClient {
   /**
    * Get speed limit status
-   * @returns API response with data that could be boolean or string
+   * GET /api/get_config_value?category=download&option=limit_speed
+   * @returns API response with boolean config value
    */
   async getLimitSpeedStatus(): Promise<ApiResponse<PyloadConfigValue>> {
-    return this.request<PyloadConfigValue>('getConfigValue', {
-      category: JSON.stringify("download"),
-      option: JSON.stringify("limit_speed")
-    });
+    return this.request<PyloadConfigValue>('get_config_value', {
+      category: 'download',
+      option: 'limit_speed'
+    }, { method: 'GET' });
   }
 
   /**
    * Set speed limit status
+   * POST /api/set_config_value with JSON body {category, option, value}
    * @param limitSpeed Speed limit status to set
-   * @returns API response with boolean or string result
+   * @returns API response
    */
   async setLimitSpeedStatus(limitSpeed: boolean): Promise<ApiResponse<PyloadConfigValue>> {
-    return this.request<PyloadConfigValue>('setConfigValue', {
-      category: JSON.stringify("download"),
-      option: JSON.stringify("limit_speed"),
-      value: JSON.stringify(limitSpeed.toString())
+    return this.request<PyloadConfigValue>('set_config_value', {
+      category: 'download',
+      option: 'limit_speed',
+      value: limitSpeed
     });
   }
 }

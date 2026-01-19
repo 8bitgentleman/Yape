@@ -1,31 +1,32 @@
-import { ApiResponse, DownloadTask, TaskStatus } from '../../types';
+import { ApiResponse, DownloadTask, TaskStatus, DownloadInfo } from '../../types';
 import { BaseApiClient } from './base';
 import { QueueApiClient } from './queue';
 
 /**
- * PyLoad API methods related to downloads
+ * PyLoad-NG API methods related to downloads
  */
 export class DownloadsApiClient extends BaseApiClient {
   private queueClient: QueueApiClient;
-  
+
   constructor(settings: any, defaultTimeout: number = 10000) {
     super(settings, defaultTimeout);
     this.queueClient = new QueueApiClient(settings, defaultTimeout);
   }
 
   /**
-   * Pause a download
+   * Pause/stop a download
+   * POST /api/stop_downloads with JSON body {file_ids: [id]}
    */
   async pauseDownload(fid: string): Promise<ApiResponse<boolean>> {
     try {
       console.log(`[DEBUG] Pausing download ${fid}`);
-      // PyLoad has different endpoints depending on version
-      // Try stopDownloads (newer versions)
-      const response = await this.request<any>('stopDownloads', { fids: [fid] });
-      
+      const response = await this.request<void>('stop_downloads', {
+        file_ids: [parseInt(fid, 10)]
+      });
+
       return {
-        success: true,
-        data: true
+        success: response.success,
+        data: response.success
       };
     } catch (e) {
       console.error('Failed to pause download:', e);
@@ -38,18 +39,20 @@ export class DownloadsApiClient extends BaseApiClient {
   }
 
   /**
-   * Resume a download
+   * Resume/restart a download
+   * POST /api/restart_file?file_id=X (uses query param, not JSON body)
    */
   async resumeDownload(fid: string): Promise<ApiResponse<boolean>> {
     try {
       console.log(`[DEBUG] Resuming download ${fid}`);
-      // PyLoad has different endpoints for resuming downloads
-      // Try restartFile (newer versions)
-      const response = await this.request<any>('restartFile', { fid });
-      
+      // restart_file uses query parameter, not JSON body
+      const response = await this.request<void>('restart_file', {
+        file_id: parseInt(fid, 10)
+      }, { method: 'POST', useQueryParams: true });
+
       return {
-        success: true,
-        data: true
+        success: response.success,
+        data: response.success
       };
     } catch (e) {
       console.error('Failed to resume download:', e);
@@ -60,115 +63,74 @@ export class DownloadsApiClient extends BaseApiClient {
       };
     }
   }
-  
+
   /**
-   * Get status of all downloads with extra debugging
+   * Get status of all active downloads
+   * GET /api/status_downloads
    */
   async getStatusDownloads(): Promise<ApiResponse<DownloadTask[]>> {
     console.log('[DEBUG] Calling getStatusDownloads');
     try {
-      const response = await this.request<any>('statusDownloads');
-      
+      const response = await this.request<DownloadInfo[]>('status_downloads', {}, { method: 'GET' });
+
       console.log('[DEBUG] getStatusDownloads response:', response);
-      
+
       if (!response.success || !response.data) {
         console.error('[DEBUG] Failed to get downloads status:', response);
-        return response as ApiResponse<DownloadTask[]>;
+        return {
+          success: response.success,
+          error: response.error,
+          message: response.message,
+          data: []
+        };
       }
-      
-      // Add detailed logging to help debug response format
-      console.log('[DEBUG] Raw statusDownloads response type:', typeof response.data);
+
+      // Log response structure
+      console.log('[DEBUG] Raw status_downloads response type:', typeof response.data);
       console.log('[DEBUG] isArray?', Array.isArray(response.data));
-      
-      if (typeof response.data === 'object' && !Array.isArray(response.data)) {
-        console.log('[DEBUG] Object keys:', Object.keys(response.data));
-      }
-      
-      // Try to log full response structure
+
       try {
         console.log('[DEBUG] Full response structure:', JSON.stringify(response.data, null, 2));
       } catch (e) {
         console.warn('[DEBUG] Could not stringify response:', e);
       }
-      
-      // Special debug step: check if the response is "total" value only, with no downloads
-      // This is a specific PyLoad format that means there are no current downloads
-      if (typeof response.data === 'object' && !Array.isArray(response.data) &&
-          'total' in response.data && Object.keys(response.data).length <= 5) {
-        console.log('[DEBUG] Detected PyLoad status-only response with no tasks');
-        
-        // Check for active downloads in the special PyLoad format
-        if ('active' in response.data && typeof response.data.active === 'number') {
-          
-          console.log('[DEBUG] Found active downloads count:', response.data.active);
-          
-          // If there are active downloads but they're not in the response object
-          // Try using getQueueData to get the active downloads
-          if (response.data.active > 0) {
-            console.log('[DEBUG] Found active downloads, but need to get queue data');
-            
-            // Make a direct call to get the queue data since active count > 0
-            try {
-              const queueResponse = await this.queueClient.getQueueData();
-              if (queueResponse.success && queueResponse.data && queueResponse.data.length > 0) {
-                console.log('[DEBUG] Successfully got queue data with tasks:', queueResponse.data.length);
-                return queueResponse;
-              }
-            } catch (queueError) {
-              console.error('[DEBUG] Error getting queue data:', queueError);
-            }
-          }
+
+      // status_downloads returns empty array [] when no active downloads
+      if (Array.isArray(response.data) && response.data.length === 0) {
+        console.log('[DEBUG] No active downloads, checking queue for tasks');
+
+        // Get queue data to show all tasks
+        const queueResponse = await this.queueClient.getQueueData();
+        if (queueResponse.success && queueResponse.data) {
+          return queueResponse;
         }
-        
-        // Return empty array in this case, as there are no downloads
+
         return {
           success: true,
           data: []
         };
       }
-      
-      // Map the API response to our DownloadTask interface
-      const tasks: DownloadTask[] = [];
-      
-      // Check if data is array
-      if (Array.isArray(response.data)) {
-        console.log('Handling array response format');
-        
-        // Try to map each item to a DownloadTask
-        response.data.forEach((item: any, index: number) => {
-          if (item) {
-            try {
-              // Extract required fields with fallbacks
-              // Use downloaded size (bleft) if available
-              const bytesTotal = Number(item.size || item.total_size || 0);
-              const bytesLoaded = item.bleft ? (bytesTotal - Number(item.bleft)) : (bytesTotal * (Number(item.percent || 0) / 100));
-              
-              const task: DownloadTask = {
-                id: String(item.id || item.fid || `unknown-${index}`),
-                name: String(item.name || item.packageName || 'Unknown'),
-                status: this.mapStatus(item.status || item.statusmsg || 'unknown'),
-                url: String(item.url || item.host || ''),
-                added: Number(item.added || Date.now() / 1000),
-                percent: Number(item.percent || item.progress || 0),
-                size: bytesTotal,
-                bytesLoaded: bytesLoaded, // Add bytesLoaded property
-                speed: Number(item.speed || item.download_speed || 0),
-                eta: Number(item.eta || 0),
-                format_eta: String(item.format_eta || item.eta || '00:00:00')
-              };
-              
-              console.log(`Parsed download task ${index}:`, task);
-              tasks.push(task);
-            } catch (e) {
-              console.error(`Failed to parse download task ${index}:`, e, item);
-            }
-          }
-        });
-      } else if (typeof response.data === 'object') {
-        console.log('Handling object response format');
-        this.processObjectResponse(response.data, tasks);
-      }
-      
+
+      // Map DownloadInfo to DownloadTask
+      const tasks: DownloadTask[] = response.data.map((item: DownloadInfo, index: number) => {
+        const bytesTotal = Number(item.size || 0);
+        const bytesLoaded = item.bleft ? (bytesTotal - Number(item.bleft)) : (bytesTotal * (Number(item.percent || 0) / 100));
+
+        return {
+          id: String(item.fid),
+          name: String(item.name || 'Unknown'),
+          status: this.mapStatus(item.status, item.statusmsg),
+          url: '',
+          added: Date.now() / 1000,
+          percent: Number(item.percent || 0),
+          size: bytesTotal,
+          bytesLoaded: bytesLoaded,
+          speed: Number(item.speed || 0),
+          eta: Number(item.eta || 0),
+          format_eta: String(item.format_eta || '00:00:00')
+        };
+      });
+
       console.log('Final processed download tasks:', tasks);
       return {
         success: true,
@@ -185,117 +147,37 @@ export class DownloadsApiClient extends BaseApiClient {
   }
 
   /**
-   * Process PyLoad response object to extract tasks
+   * Map PyLoad-NG numeric status to TaskStatus enum
+   * Based on OpenAPI DownloadStatus enum:
+   * 0=FINISHED, 1=OFFLINE, 2=ONLINE, 3=QUEUED, 4=SKIPPED, 5=WAITING,
+   * 6=TEMPOFFLINE, 7=STARTING, 8=FAILED, 9=ABORTED, 10=DECRYPTING,
+   * 11=CUSTOM, 12=DOWNLOADING, 13=PROCESSING, 14=UNKNOWN
    */
-  private processObjectResponse(data: any, tasks: DownloadTask[]): void {
-    // Check for downloads property (used in some PyLoad versions)
-    if (data.downloads && Array.isArray(data.downloads)) {
-      console.log('Processing downloads array from response');
-      data.downloads.forEach((item: any, index: number) => {
-        try {
-          // Extract task info
-          const bytesTotal = Number(item.size || item.total_size || 0);
-          const bytesLoaded = item.bleft ? (bytesTotal - Number(item.bleft)) : (bytesTotal * (Number(item.percent || 0) / 100));
-          
-          const task: DownloadTask = {
-            id: String(item.id || item.fid || `download-${index}`),
-            name: String(item.name || item.packageName || 'Unknown'),
-            status: this.mapStatus(item.status || item.statusmsg || 'unknown'),
-            url: String(item.url || item.host || ''),
-            added: Number(item.added || Date.now() / 1000),
-            percent: Number(item.percent || item.progress || 0),
-            size: bytesTotal,
-            bytesLoaded: bytesLoaded,
-            speed: Number(item.speed || item.download_speed || 0),
-            eta: Number(item.eta || 0),
-            format_eta: String(item.format_eta || item.eta || '00:00:00')
-          };
-          
-          console.log(`Parsed download from downloads array ${index}:`, task);
-          tasks.push(task);
-        } catch (e) {
-          console.error(`Failed to parse download ${index}:`, e, item);
-        }
-      });
-    }
-    
-    // Try to handle queue data
-    if (data.queue && Array.isArray(data.queue)) {
-      console.log('Processing queue array from response');
-      data.queue.forEach((item: any, index: number) => {
-        try {
-          const task: DownloadTask = {
-            id: String(item.id || item.fid || `queue-${index}`),
-            name: String(item.name || 'Unknown'),
-            status: TaskStatus.Queued,
-            url: String(item.url || ''),
-            added: Number(item.added || Date.now() / 1000),
-            percent: Number(item.percent || 0),
-            size: Number(item.size || 0),
-            speed: Number(item.speed || 0),
-            eta: Number(item.eta || 0),
-            format_eta: String(item.format_eta || '00:00:00')
-          };
-          
-          console.log(`Parsed queue task ${index}:`, task);
-          tasks.push(task);
-        } catch (e) {
-          console.error(`Failed to parse queue task ${index}:`, e, item);
-        }
-      });
-    }
-    
-    // Try to handle collector data (finished downloads)
-    if (data.collector && Array.isArray(data.collector)) {
-      console.log('Processing collector array from response');
-      data.collector.forEach((item: any, index: number) => {
-        try {
-          const task: DownloadTask = {
-            id: String(item.id || item.fid || `collector-${index}`),
-            name: String(item.name || 'Unknown'),
-            status: TaskStatus.Finished,
-            url: String(item.url || ''),
-            added: Number(item.added || Date.now() / 1000),
-            percent: 100,
-            size: Number(item.size || 0),
-            speed: 0,
-            eta: 0,
-            format_eta: '00:00:00'
-          };
-          
-          console.log(`Parsed collector task ${index}:`, task);
-          tasks.push(task);
-        } catch (e) {
-          console.error(`Failed to parse collector task ${index}:`, e, item);
-        }
-      });
-    }
-  }
-
-  /**
-   * Map PyLoad status to our TaskStatus enum
-   */
-  private mapStatus(status: string | number): TaskStatus | string {
-    // If status is a number, convert it to a string representation first
+  private mapStatus(status: number | string, statusmsg?: string): TaskStatus | string {
     if (typeof status === 'number') {
-      // Map common PyLoad numeric status codes
       switch (status) {
-        case 1: return TaskStatus.Waiting;
-        case 2: return TaskStatus.Waiting;
-        case 3: return TaskStatus.Waiting;
-        case 7: return TaskStatus.Paused;
-        case 12: return TaskStatus.Active; // Downloading
-        case 13: return TaskStatus.Active; // Processing
-        case 9: return TaskStatus.Finished;
-        case 10: return TaskStatus.Finished;
-        case 11: return TaskStatus.Failed;
-        default: return `status-${status}`; // Return as string for unknown codes
+        case 0: return TaskStatus.Finished;
+        case 1: return TaskStatus.Failed; // OFFLINE
+        case 2: return TaskStatus.Waiting; // ONLINE
+        case 3: return TaskStatus.Queued;
+        case 4: return TaskStatus.Failed; // SKIPPED
+        case 5: return TaskStatus.Waiting;
+        case 6: return TaskStatus.Waiting; // TEMPOFFLINE
+        case 7: return TaskStatus.Active; // STARTING
+        case 8: return TaskStatus.Failed;
+        case 9: return TaskStatus.Failed; // ABORTED
+        case 10: return TaskStatus.Active; // DECRYPTING
+        case 11: return statusmsg || `status-${status}`; // CUSTOM
+        case 12: return TaskStatus.Active; // DOWNLOADING
+        case 13: return TaskStatus.Active; // PROCESSING
+        case 14: return TaskStatus.Waiting; // UNKNOWN
+        default: return `status-${status}`;
       }
     }
-    
+
     // Handle string status
-    const lowerStatus = status.toLowerCase();
-    
+    const lowerStatus = String(status).toLowerCase();
+
     if (lowerStatus.includes('queue')) return TaskStatus.Queued;
     if (lowerStatus.includes('active') || lowerStatus.includes('download')) return TaskStatus.Active;
     if (lowerStatus.includes('wait')) return TaskStatus.Waiting;
@@ -303,7 +185,7 @@ export class DownloadsApiClient extends BaseApiClient {
     if (lowerStatus.includes('finish')) return TaskStatus.Finished;
     if (lowerStatus.includes('complete')) return TaskStatus.Complete;
     if (lowerStatus.includes('fail') || lowerStatus.includes('error')) return TaskStatus.Failed;
-    
+
     return status;
   }
 }

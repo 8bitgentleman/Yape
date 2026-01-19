@@ -1,9 +1,10 @@
-import { ApiResponse, ConnectionSettings, DownloadTask, PyloadConfigValue } from '../types';
-import { BaseApiClient } from './modules/base';
+import { ApiResponse, ConnectionSettings, DownloadTask, PyloadConfigValue, CaptchaTask } from '../types';
+import { BaseApiClient, RequestOptions } from './modules/base';
 import { AuthApiClient } from './modules/auth';
 import { DownloadsApiClient } from './modules/downloads';
 import { QueueApiClient } from './modules/queue';
 import { ConfigApiClient } from './modules/config';
+import { CaptchaApiClient } from './modules/captcha';
 
 /**
  * PyLoad API client that combines all module functionality
@@ -13,6 +14,7 @@ export class PyloadClient {
   private downloadsClient: DownloadsApiClient;
   private queueClient: QueueApiClient;
   private configClient: ConfigApiClient;
+  private captchaClient: CaptchaApiClient;
 
   /**
    * Create a new PyloadClient instance
@@ -24,6 +26,7 @@ export class PyloadClient {
     this.downloadsClient = new DownloadsApiClient(settings, defaultTimeout);
     this.queueClient = new QueueApiClient(settings, defaultTimeout);
     this.configClient = new ConfigApiClient(settings, defaultTimeout);
+    this.captchaClient = new CaptchaApiClient(settings, defaultTimeout);
   }
 
   // Auth methods
@@ -81,6 +84,35 @@ export class PyloadClient {
     return this.queueClient.clearFinishedTasks();
   }
 
+  // Captcha methods
+  /**
+   * Check if a captcha task is waiting to be solved
+   */
+  async isCaptchaWaiting(): Promise<ApiResponse<boolean>> {
+    return this.captchaClient.isCaptchaWaiting();
+  }
+
+  /**
+   * Get the current captcha task details
+   */
+  async getCaptchaTask(): Promise<ApiResponse<CaptchaTask>> {
+    return this.captchaClient.getCaptchaTask();
+  }
+
+  /**
+   * Get status of a specific captcha task
+   */
+  async getCaptchaTaskStatus(tid: number): Promise<ApiResponse<string>> {
+    return this.captchaClient.getCaptchaTaskStatus(tid);
+  }
+
+  /**
+   * Submit captcha solution
+   */
+  async setCaptchaResult(tid: number, result: string): Promise<ApiResponse<void>> {
+    return this.captchaClient.setCaptchaResult(tid, result);
+  }
+
   /**
    * Make a raw API request (for advanced usage)
    * @param endpoint API endpoint
@@ -90,7 +122,7 @@ export class PyloadClient {
   async request<T>(
     endpoint: string,
     params?: Record<string, any>,
-    options?: { method?: 'GET' | 'POST', timeout?: number }
+    options?: RequestOptions
   ): Promise<ApiResponse<T>> {
     return this.queueClient['request']<T>(endpoint, params, options);
   }

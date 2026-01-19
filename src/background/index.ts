@@ -46,7 +46,7 @@ async function safeCreateNotification(id: string, options: {
   iconUrl: string;
   priority?: number;
   silent?: boolean;
-}, notificationType: 'added' | 'completed' | 'failed' = 'completed'): Promise<void> {
+}, notificationType: 'added' | 'completed' | 'failed' | 'captcha' = 'completed'): Promise<void> {
   // Log notification we're going to show
   console.log('[YAPE-DEBUG] Attempting to create notification:', {
     id,
@@ -71,7 +71,8 @@ async function safeCreateNotification(id: string, options: {
     if (settings && (
       (notificationType === 'added' && !settings.onDownloadAdded) ||
       (notificationType === 'completed' && !settings.onDownloadCompleted) ||
-      (notificationType === 'failed' && !settings.onDownloadFailed)
+      (notificationType === 'failed' && !settings.onDownloadFailed) ||
+      (notificationType === 'captcha' && !settings.onCaptchaWaiting)
     )) {
       console.log(`[YAPE-DEBUG] ${notificationType} notifications are disabled in user settings, skipping`);
       return;
@@ -138,6 +139,9 @@ async function safeCreateNotification(id: string, options: {
 // Track the last notified downloads to avoid duplicate notifications
 let lastNotifiedDownloadIds: Set<string> = new Set();
 
+// Track if we've already notified about a captcha waiting
+let captchaNotificationShown = false;
+
 // Background check interval ID
 let backgroundCheckIntervalId: number | null = null;
 
@@ -179,6 +183,7 @@ async function initializeExtension() {
         onDownloadAdded: true,
         onDownloadCompleted: true,
         onDownloadFailed: true,
+        onCaptchaWaiting: true,
         soundEnabled: false
       }
     });
@@ -218,15 +223,17 @@ async function setupBackgroundChecks() {
   
   // Set up the interval
   backgroundCheckIntervalId = setInterval(() => {
-    console.log('[YAPE-DEBUG] Interval triggered, running check...');
+    console.log('[YAPE-DEBUG] Interval triggered, running checks...');
     checkForFinishedDownloads();
+    checkForCaptcha();
   }, checkInterval) as unknown as number;
   
   console.log('[YAPE-DEBUG] Background check interval set:', backgroundCheckIntervalId);
   
   // Also run an immediate check
-  console.log('[YAPE-DEBUG] Running immediate check...');
+  console.log('[YAPE-DEBUG] Running immediate checks...');
   checkForFinishedDownloads();
+  checkForCaptcha();
   
   // Set up a periodic sanity check to ensure our interval is still running
   // and the badge is visible if it should be
@@ -424,6 +431,65 @@ async function checkForFinishedDownloads() {
     
   } catch (error) {
     console.error('[YAPE-DEBUG] Background check: Error checking for finished downloads:', error);
+  }
+}
+
+// Check for waiting captchas and notify
+async function checkForCaptcha() {
+  console.log('[YAPE-DEBUG] Checking for captcha...');
+
+  const state = await loadState();
+
+  // Skip if not logged in
+  if (!state || !state.isLoggedIn) {
+    return;
+  }
+
+  try {
+    const client = new PyloadClient(state.settings.connection);
+
+    const captchaResponse = await client.isCaptchaWaiting();
+
+    if (!captchaResponse.success) {
+      console.log('[YAPE-DEBUG] Failed to check captcha status:', captchaResponse.message);
+      return;
+    }
+
+    const isCaptchaWaiting = captchaResponse.data === true;
+    console.log('[YAPE-DEBUG] Captcha waiting:', isCaptchaWaiting);
+
+    if (isCaptchaWaiting && !captchaNotificationShown) {
+      // Show captcha notification
+      console.log('[YAPE-DEBUG] Showing captcha notification');
+      safeCreateNotification('captcha-waiting-' + Date.now(), {
+        type: 'basic',
+        title: 'Captcha Required',
+        message: 'A download is waiting for captcha input. Open PyLoad to solve it.',
+        iconUrl: './images/icon_128.png',
+        priority: 2  // High priority
+      }, 'captcha');
+
+      captchaNotificationShown = true;
+
+      // Also update badge to show captcha indicator
+      chrome.action.setBadgeText({ text: '!' });
+      chrome.action.setBadgeBackgroundColor({ color: '#ffc107' }); // Yellow/warning color
+    } else if (!isCaptchaWaiting && captchaNotificationShown) {
+      // Captcha was solved, reset the flag
+      console.log('[YAPE-DEBUG] Captcha no longer waiting, resetting notification flag');
+      captchaNotificationShown = false;
+
+      // Restore normal badge
+      const storedData = await chrome.storage.local.get(['badgeCount']);
+      if (storedData.badgeCount && storedData.badgeCount > 0) {
+        chrome.action.setBadgeText({ text: storedData.badgeCount.toString() });
+        chrome.action.setBadgeBackgroundColor({ color: '#28a745' }); // Green
+      } else {
+        chrome.action.setBadgeText({ text: '' });
+      }
+    }
+  } catch (error) {
+    console.error('[YAPE-DEBUG] Error checking for captcha:', error);
   }
 }
 
@@ -1044,6 +1110,7 @@ async function startup() {
           onDownloadAdded: true,
           onDownloadCompleted: true,
           onDownloadFailed: true,
+          onCaptchaWaiting: true,
           soundEnabled: false
         }
       });

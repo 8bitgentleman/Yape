@@ -1,7 +1,21 @@
 import { ApiError, ApiResponse, ConnectionSettings } from '../../types';
 
 /**
- * Base PyLoad API client with core request functionality
+ * Request options for the PyLoad-NG API
+ */
+export interface RequestOptions {
+  method?: 'GET' | 'POST';
+  timeout?: number;
+  /**
+   * For POST requests: send params as query string instead of JSON body.
+   * Required for endpoints like restart_file that use POST with query params.
+   */
+  useQueryParams?: boolean;
+}
+
+/**
+ * Base PyLoad-NG API client with core request functionality
+ * Uses HTTP Basic Auth and JSON request bodies
  */
 export class BaseApiClient {
   protected baseUrl: string;
@@ -17,7 +31,7 @@ export class BaseApiClient {
   constructor(settings: ConnectionSettings, defaultTimeout: number = 10000) {
     const { protocol, hostname, port, path } = settings;
     this.baseUrl = `${protocol}://${hostname}:${port}${path}`;
-    
+
     // Remove trailing slash if present
     if (this.baseUrl.endsWith('/')) {
       this.baseUrl = this.baseUrl.slice(0, -1);
@@ -29,24 +43,33 @@ export class BaseApiClient {
   }
 
   /**
-   * Make a request to the PyLoad API
-   * @param endpoint API endpoint
+   * Get HTTP Basic Auth header value
+   */
+  protected getBasicAuthHeader(): string {
+    const credentials = btoa(`${this.username}:${this.password}`);
+    return `Basic ${credentials}`;
+  }
+
+  /**
+   * Make a request to the PyLoad-NG API
+   * @param endpoint API endpoint (snake_case)
    * @param params Request parameters
    * @param options Request options
    * @returns API response
    */
   async request<T>(
-    endpoint: string, 
-    params: Record<string, any> = {}, 
-    options: { method?: 'GET' | 'POST', timeout?: number } = {}
+    endpoint: string,
+    params: Record<string, any> = {},
+    options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
-    const { method = 'POST', timeout = this.defaultTimeout } = options;
-    
+    const { method = 'POST', timeout = this.defaultTimeout, useQueryParams = false } = options;
+
     console.log(`[YAPE-DEBUG] Making API request to ${endpoint}`, {
-      method, 
+      method,
+      useQueryParams,
       params: JSON.stringify(params, null, 2)
     });
-    
+
     // Prepare URL and query parameters
     let url: URL;
     try {
@@ -59,41 +82,32 @@ export class BaseApiClient {
         message: `Invalid server URL: ${this.baseUrl}/api/${endpoint}`
       };
     }
-    
-    if (method === 'GET') {
+
+    // For GET requests OR POST with useQueryParams, append params as query string
+    if (method === 'GET' || useQueryParams) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) {
-          url.searchParams.append(key, 
+          url.searchParams.append(key,
             typeof value === 'object' ? JSON.stringify(value) : String(value)
           );
         }
       });
     }
 
-    // Prepare request options
+    // Prepare request options with Basic Auth
     const requestInit: RequestInit = {
       method,
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      // Add credentials to send cookies
-      credentials: 'include'
+        'Authorization': this.getBasicAuthHeader(),
+        'Accept': 'application/json'
+      }
     };
 
-    // Add body for POST requests
-    if (method === 'POST') {
-      const formData = new URLSearchParams();
-      
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          formData.append(key, 
-            typeof value === 'object' ? JSON.stringify(value) : String(value)
-          );
-        }
-      });
-      
-      requestInit.body = formData;
-      console.log(`[YAPE-DEBUG] POST body:`, Object.fromEntries(formData.entries()));
+    // Add JSON body for POST requests (unless using query params)
+    if (method === 'POST' && !useQueryParams) {
+      (requestInit.headers as Record<string, string>)['Content-Type'] = 'application/json';
+      requestInit.body = JSON.stringify(params);
+      console.log(`[YAPE-DEBUG] POST body:`, params);
     }
 
     try {
@@ -105,19 +119,14 @@ export class BaseApiClient {
       // Execute fetch request
       const response = await fetch(url.toString(), requestInit);
       clearTimeout(timeoutId);
-      
-      // Log raw response details
-      // console.log(`API Response status: ${response.status} ${response.statusText}`);
-      // console.log(`Response headers:`, Object.fromEntries([...response.headers.entries()]));
-      // console.log(`Response URL: ${response.url}`);
-      
+
       // Create a clone to read the response body for logging
       const clonedResponse = response.clone();
 
       // Parse response
       const contentType = response.headers.get('content-type') || '';
       let data;
-      
+
       if (contentType.includes('application/json')) {
         data = await response.json();
       } else {
@@ -138,56 +147,56 @@ export class BaseApiClient {
       } catch (e) {
         console.warn('Could not log raw response text:', e);
       }
-      
+
       console.log('API parsed response:', data);
 
       // Handle API errors
       if (!response.ok) {
         // Handle different error status codes
-        if (response.status === 403) {
-          return { 
-            success: false, 
-            error: 'login-failed', 
-            message: 'Invalid credentials. Make sure you are logged in.'
+        if (response.status === 401 || response.status === 403) {
+          return {
+            success: false,
+            error: 'login-failed',
+            message: 'Invalid credentials. Check username and password.'
           };
         }
-        
-        return { 
-          success: false, 
-          error: 'server-error', 
+
+        return {
+          success: false,
+          error: 'server-error',
           message: data && data.error ? data.error : 'Server returned an error'
         };
       }
 
       // Check for API error in response
       if (data && data.hasOwnProperty('error') && data.error) {
-        return { 
-          success: false, 
-          error: 'request-failed', 
+        return {
+          success: false,
+          error: 'request-failed',
           message: data.error
         };
       }
 
       // Return successful response
-      return { 
-        success: true, 
-        data: data as T 
+      return {
+        success: true,
+        data: data as T
       };
     } catch (error) {
       console.error('API request error:', error);
-      
+
       // Handle fetch errors
       if (error instanceof DOMException && error.name === 'AbortError') {
-        return { 
-          success: false, 
-          error: 'timeout', 
+        return {
+          success: false,
+          error: 'timeout',
           message: 'Request timed out'
         };
       }
-      
-      return { 
-        success: false, 
-        error: 'connection-error', 
+
+      return {
+        success: false,
+        error: 'connection-error',
         message: error instanceof Error ? error.message : 'Failed to connect to server'
       };
     }
