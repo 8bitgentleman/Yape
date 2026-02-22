@@ -291,6 +291,8 @@ const Popup: React.FC = () => {
             activeTasks={activeTasks}
             completedTasks={completedTasks}
             onRemoveTask={removeTask}
+            onPauseTask={pauseDownload}
+            onResumeTask={resumeDownload}
             onClearCompleted={clearCompletedTasks}
             showCompleted={state?.settings.ui.showCompleted || false}
             isLoading={dataLoading}

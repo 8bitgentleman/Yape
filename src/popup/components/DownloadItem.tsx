@@ -5,6 +5,8 @@ import ProgressBar from '../../common/components/ProgressBar';
 interface DownloadItemProps {
   task: DownloadTask;
   onRemove?: (id: string) => void;
+  onPause?: (id: string) => void;
+  onResume?: (id: string) => void;
 }
 
 // Define a type for the object returned by getStatusInfo
@@ -18,7 +20,9 @@ interface StatusDisplayInfo {
  */
 const DownloadItem: React.FC<DownloadItemProps> = React.memo(({
   task,
-  onRemove
+  onRemove,
+  onPause,
+  onResume
 }) => {
   // Check if task is completed
   const isCompleted = task.status === TaskStatus.Finished || 
@@ -109,15 +113,32 @@ const DownloadItem: React.FC<DownloadItemProps> = React.memo(({
           </div>
         )}
         
+        {!isCompleted && !isFailed && isPaused && onResume && (
+          <button
+            className="icon-button"
+            style={{ width: '24px', height: '24px', fontSize: '0.8rem', marginLeft: '8px' }}
+            onClick={() => onResume(task.id)}
+            title="Resume download"
+          >
+            <i className="fas fa-play"></i>
+          </button>
+        )}
+
+        {!isCompleted && !isFailed && !isPaused && onPause && (
+          <button
+            className="icon-button"
+            style={{ width: '24px', height: '24px', fontSize: '0.8rem', marginLeft: '8px' }}
+            onClick={() => onPause(task.id)}
+            title="Pause download"
+          >
+            <i className="fas fa-pause"></i>
+          </button>
+        )}
+
         {onRemove && (
           <button
             className="icon-button"
-            style={{ 
-              width: '24px', 
-              height: '24px', 
-              fontSize: '0.8rem',
-              marginLeft: '8px'
-            }}
+            style={{ width: '24px', height: '24px', fontSize: '0.8rem', marginLeft: '8px' }}
             onClick={() => onRemove(task.id)}
             title="Remove download"
           >

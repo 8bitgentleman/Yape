@@ -7,6 +7,8 @@ interface DownloadListProps {
   activeTasks: DownloadTask[];
   completedTasks: DownloadTask[];
   onRemoveTask: (id: string) => void;
+  onPauseTask: (id: string) => void;
+  onResumeTask: (id: string) => void;
   onClearCompleted: () => void;
   showCompleted: boolean;
   isLoading?: boolean;
@@ -19,6 +21,8 @@ const DownloadList: React.FC<DownloadListProps> = ({
   activeTasks,
   completedTasks,
   onRemoveTask,
+  onPauseTask,
+  onResumeTask,
   onClearCompleted,
   showCompleted,
   isLoading = false
@@ -58,14 +62,16 @@ const DownloadList: React.FC<DownloadListProps> = ({
   ), []);
   
   // Memoize task lists to prevent unnecessary re-renders when task arrays are the same
-  const activeTasksContent = useMemo(() => 
+  const activeTasksContent = useMemo(() =>
     activeTasks.map((task) => (
-      <DownloadItem 
-        key={task.id} 
-        task={task} 
+      <DownloadItem
+        key={task.id}
+        task={task}
         onRemove={onRemoveTask}
+        onPause={onPauseTask}
+        onResume={onResumeTask}
       />
-    )), [activeTasks, onRemoveTask]);
+    )), [activeTasks, onRemoveTask, onPauseTask, onResumeTask]);
   
   const completedTasksContent = useMemo(() => 
     showCompleted && completedTasks.length > 0 ? (
