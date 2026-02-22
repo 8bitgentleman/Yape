@@ -2,7 +2,8 @@ import { loadState, updateState } from '../common/state';
 import { PyloadClient } from '../common/api/client';
 import { ApiResponse, ConnectionSettings, DownloadTask, TaskStatus } from '../common/types';
 
-// Message handler for badge update messages
+// Single top-level message handler - registered once, handles all message types.
+// Must be at module scope so it's available immediately when the service worker wakes.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Handle badge update message from popup or content scripts
     if (message.type === 'update_badge' && message.count !== undefined) {
@@ -13,8 +14,70 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Handle check for finished downloads message
     if (message.type === 'check_for_finished_downloads') {
       console.log('[YAPE-DEBUG] Received request to check for finished downloads');
-      // Run a check right away
       checkForFinishedDownloads();
+    }
+
+    // Handle show notification message
+    if (message.type === 'notification') {
+      safeCreateNotification(`notification-${Date.now()}`, {
+        type: 'basic',
+        title: message.title || 'Yape',
+        message: message.message || '',
+        iconUrl: './images/icon_128.png',
+      }, message.notificationType || 'completed');
+    }
+
+    // Handle settings update message
+    if (message.type === 'settings_updated') {
+      console.log('[YAPE-DEBUG] Background received settings update, reconfiguring background checks...');
+      setupBackgroundChecks();
+    }
+
+    // Handle notification settings update message - sync to flat storage key for fast access
+    if (message.type === 'notification_settings_updated') {
+      console.log('[YAPE-DEBUG] Background received notification settings update:', message.settings);
+      // Preserve onCaptchaWaiting if not included in the incoming settings
+      chrome.storage.local.get(['notificationSettings'], (result) => {
+        const existing = result.notificationSettings || {};
+        chrome.storage.local.set({
+          notificationSettings: {
+            ...existing,
+            ...message.settings,
+          }
+        });
+      });
+    }
+
+    // Handle restore badge message
+    if (message.type === 'restore_badge' && message.count) {
+      console.log(`[YAPE-DEBUG] Received request to restore badge with count: ${message.count}`);
+      if (finishedDownloadCount !== message.count) {
+        updateBadge(message.count);
+      } else {
+        chrome.action.setBadgeText({ text: message.count.toString() });
+        chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
+      }
+    }
+
+    // Handle explicit notification creation message
+    if (message.type === 'create_notification' && message.options) {
+      console.log('[YAPE-DEBUG] Received request to create notification via message');
+      try {
+        chrome.notifications.create(message.id || `notification-${Date.now()}`, message.options, (notificationId) => {
+          console.log('[YAPE-DEBUG] Created notification via message handler:', notificationId);
+        });
+      } catch (error) {
+        console.error('[YAPE-DEBUG] Failed to create notification via message handler:', error);
+      }
+    }
+
+    // Handle download added message - track ID to avoid duplicate completion notification
+    if (message.type === 'download_added' && message.packageId) {
+      console.log(`[YAPE-DEBUG] Download added with ID: ${message.packageId}, adding to notified list`);
+      lastNotifiedDownloadIds.add(message.packageId.toString());
+      chrome.storage.local.set({
+        lastNotifiedDownloadIds: JSON.stringify(Array.from(lastNotifiedDownloadIds))
+      });
     }
 
     return true; // Keep channel open for async response
@@ -46,7 +109,7 @@ async function safeCreateNotification(id: string, options: {
   iconUrl: string;
   priority?: number;
   silent?: boolean;
-}, notificationType: 'added' | 'completed' | 'failed' | 'captcha' = 'completed'): Promise<void> {
+}, notificationType: 'added' | 'completed' | 'failed' | 'captcha' | 'cleared' = 'completed'): Promise<void> {
   // Log notification we're going to show
   console.log('[YAPE-DEBUG] Attempting to create notification:', {
     id,
@@ -72,7 +135,8 @@ async function safeCreateNotification(id: string, options: {
       (notificationType === 'added' && !settings.onDownloadAdded) ||
       (notificationType === 'completed' && !settings.onDownloadCompleted) ||
       (notificationType === 'failed' && !settings.onDownloadFailed) ||
-      (notificationType === 'captcha' && !settings.onCaptchaWaiting)
+      (notificationType === 'captcha' && !settings.onCaptchaWaiting) ||
+      (notificationType === 'cleared' && !settings.onClearCompleted)
     )) {
       console.log(`[YAPE-DEBUG] ${notificationType} notifications are disabled in user settings, skipping`);
       return;
@@ -148,12 +212,9 @@ let backgroundCheckIntervalId: number | null = null;
 // Initialize the extension
 async function initializeExtension() {
   console.log('[YAPE] Initializing extension...');
-  
+
   // Setup context menus
   initializeContextMenus();
-  
-  // Set up message listeners
-  initializeMessageHandlers();
 
   // Load previously stored notification IDs and settings
   const storedData = await chrome.storage.local.get([
@@ -898,88 +959,6 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
   }
 }
 
-// Initialize message handlers
-function initializeMessageHandlers() {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('[YAPE-DEBUG] Received message:', message.type);
-    
-    // Handle show notification message
-    if (message.type === 'notification') {
-      safeCreateNotification(`notification-${Date.now()}`, {
-        type: 'basic',
-        title: message.title || 'Yape',
-        message: message.message || '',
-        iconUrl: './images/icon_128.png',
-      }, message.notificationType || 'completed');
-    }
-    
-    // Handle settings update message
-    if (message.type === 'settings_updated') {
-      console.log('[YAPE-DEBUG] Background received settings update, reconfiguring background checks...');
-      setupBackgroundChecks();
-    }
-    
-    // Handle notification settings update message
-    if (message.type === 'notification_settings_updated') {
-      console.log('[YAPE-DEBUG] Background received notification settings update:', message.settings);
-      // Store these settings in local storage for faster access
-      chrome.storage.local.set({ notificationSettings: message.settings }, () => {
-        console.log('[YAPE-DEBUG] Notification settings stored in local storage');
-      });
-    }
-    
-    // Handle restore badge message
-    if (message.type === 'restore_badge' && message.count) {
-      console.log(`[YAPE-DEBUG] Received request to restore badge with count: ${message.count}`);
-      // Only update if the count is different from current
-      if (finishedDownloadCount !== message.count) {
-        updateBadge(message.count);
-      } else {
-        // Even if the count is the same, ensure the badge is visible
-        chrome.action.setBadgeText({ text: message.count.toString() });
-        chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
-        console.log(`[YAPE-DEBUG] Ensured badge visibility with count: ${message.count}`);
-      }
-    }
-    
-    // Handle explicit notification creation message
-    if (message.type === 'create_notification' && message.options) {
-      console.log('[YAPE-DEBUG] Received request to create notification via message');
-      try {
-        chrome.notifications.create(message.id || `notification-${Date.now()}`, message.options, (notificationId) => {
-          console.log('[YAPE-DEBUG] Created notification via message handler:', notificationId);
-        });
-      } catch (error) {
-        console.error('[YAPE-DEBUG] Failed to create notification via message handler:', error);
-      }
-    }
-    
-    // Handle download added message - mainly used for tracking ID for notification tracking
-    if (message.type === 'download_added' && message.packageId) {
-      console.log(`[YAPE-DEBUG] Download added with ID: ${message.packageId}, adding to notified list`);
-      // Add to our notified set to avoid showing completion notification later
-      lastNotifiedDownloadIds.add(message.packageId.toString());
-      
-      // Persist the notification IDs
-      chrome.storage.local.set({
-        lastNotifiedDownloadIds: JSON.stringify(Array.from(lastNotifiedDownloadIds))
-      });
-      
-      // Show notification for added download if requested
-      if (message.showNotification) {
-        safeCreateNotification(`download-added-${Date.now()}`, {
-          type: 'basic',
-          title: 'Download Added',
-          message: `"${message.packageName || 'Package has been added to PyLoad'}"`,
-          iconUrl: './images/icon_128.png',
-        }, 'added');
-      }
-    }
-    
-    // Return true to indicate async response
-    return true;
-  });
-}
 
 // Helper function to show toast notifications in tabs
 async function showToast(tabId: number | undefined, type: 'info' | 'success' | 'error' | 'warning', message: string): Promise<void> {
@@ -1137,11 +1116,7 @@ async function startup() {
     
     // Set up background checks
     await setupBackgroundChecks();
-    
-    // Set up message handlers
-    console.log('[YAPE-DEBUG] Initializing message handlers during startup');
-    initializeMessageHandlers();
-    
+
     // Run an immediate check after a short delay
     setTimeout(() => {
       console.log('[YAPE-DEBUG] Running immediate check after startup');
@@ -1156,7 +1131,6 @@ async function startup() {
     // Even if there was an error, try to initialize the core functionality
     try {
       initializeContextMenus();
-      initializeMessageHandlers();
       console.log('[YAPE-DEBUG] Initialized core functionality despite startup error');
     } catch (secondaryError) {
       console.error('[YAPE-DEBUG] Failed to initialize core functionality:', secondaryError);

@@ -6,7 +6,8 @@ interface NotificationSettingsProps {
     onDownloadAdded: boolean;
     onDownloadCompleted: boolean;
     onDownloadFailed: boolean;
-    onClearCompleted: boolean; // Added new notification type
+    onClearCompleted: boolean;
+    onCaptchaWaiting: boolean;
     soundEnabled: boolean;
   };
   onSave: (settings: {
@@ -14,7 +15,8 @@ interface NotificationSettingsProps {
     onDownloadAdded: boolean;
     onDownloadCompleted: boolean;
     onDownloadFailed: boolean;
-    onClearCompleted: boolean; // Added new notification type
+    onClearCompleted: boolean;
+    onCaptchaWaiting: boolean;
     soundEnabled: boolean;
   }) => void;
 }
@@ -130,6 +132,22 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           </label>
         </div>
         
+        {/* Captcha waiting notifications */}
+        <div className="form-check mb-3">
+          <input
+            type="checkbox"
+            id="onCaptchaWaiting"
+            name="onCaptchaWaiting"
+            className="form-check-input"
+            checked={formState.onCaptchaWaiting}
+            onChange={handleCheckboxChange}
+            disabled={!formState.enabled}
+          />
+          <label className="form-check-label" htmlFor="onCaptchaWaiting">
+            When a captcha is waiting for input
+          </label>
+        </div>
+
         {/* Sound notifications */}
         <div className="form-check mb-3">
           <input

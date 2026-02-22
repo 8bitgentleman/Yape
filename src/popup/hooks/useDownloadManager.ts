@@ -5,8 +5,8 @@ import { configValueToBoolean } from '../../common/utils/config';
 import { debounce } from '../../common/utils/debounce';
 
 export function useDownloadManager(state: State | null) {
-  // State
-  const [dataLoading, setDataLoading] = useState<boolean>(false);
+  // State - start as true so placeholders show immediately instead of empty-state flash
+  const [dataLoading, setDataLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTasks, setActiveTasks] = useState<DownloadTask[]>([]);
   const [completedTasks, setCompletedTasks] = useState<DownloadTask[]>([]);
@@ -20,6 +20,22 @@ export function useDownloadManager(state: State | null) {
   const prevActiveTasksRef = useRef<DownloadTask[]>([]);
   const prevCompletedTasksRef = useRef<DownloadTask[]>([]);
   const isRefreshingRef = useRef<boolean>(false);
+
+  // Load cached tasks from storage on mount for instant display while network fetch is in flight
+  useEffect(() => {
+    chrome.storage.local.get(['cachedTasks']).then((result) => {
+      if (result.cachedTasks) {
+        const { active, completed } = result.cachedTasks as { active: DownloadTask[], completed: DownloadTask[] };
+        if ((active?.length ?? 0) > 0 || (completed?.length ?? 0) > 0) {
+          setActiveTasks(active ?? []);
+          setCompletedTasks(completed ?? []);
+          prevActiveTasksRef.current = active ?? [];
+          prevCompletedTasksRef.current = completed ?? [];
+          setDataLoading(false);
+        }
+      }
+    });
+  }, []);
 
   // Helper function to compare task arrays by IDs and relevant properties
   const tasksEqual = (tasks1: DownloadTask[], tasks2: DownloadTask[]): boolean => {
@@ -128,13 +144,16 @@ export function useDownloadManager(state: State | null) {
           setCompletedTasks(completed);
           prevCompletedTasksRef.current = completed;
         }
-        
+
         setDownloadSpeed(totalDownloadSpeed);
+
+        // Cache tasks for instant display on next popup open
+        chrome.storage.local.set({ cachedTasks: { active, completed } });
       }
 
       // Get limit speed status
       const limitSpeedResponse = await client.getLimitSpeedStatus();
-      
+
       if (limitSpeedResponse.success && limitSpeedResponse.data !== undefined) {
         // Use utility function to convert config value to boolean
         const isLimitEnabled = configValueToBoolean(limitSpeedResponse.data);
@@ -231,21 +250,13 @@ export function useDownloadManager(state: State | null) {
       if (response.success) {
         console.log('[YAPE-DEBUG] Successfully cleared finished tasks on server');
         
-        // Ensure notification setting exists (for backward compatibility)
-        if (state.settings.notifications && state.settings.notifications.onClearCompleted === undefined) {
-          state.settings.notifications.onClearCompleted = true;
-        }
-        
-        // Show notification if enabled in settings
-        if (state.settings.notifications?.enabled && 
-            state.settings.notifications?.onClearCompleted) {
-          chrome.notifications.create('', {
-            type: 'basic',
-            title: 'PyLoad Downloads',
-            message: `Successfully cleared ${completedCount} completed download(s)`,
-            iconUrl: './images/icon_128.png',
-          });
-        }
+        // Route notification through background so settings check is centralized
+        chrome.runtime.sendMessage({
+          type: 'notification',
+          notificationType: 'cleared',
+          title: 'PyLoad Downloads',
+          message: `Successfully cleared ${completedCount} completed download(s)`,
+        }).catch(() => {});
         
         // Update badge through multiple methods to ensure it's properly updated
         console.log('[YAPE-DEBUG] Updating badge after clearing downloads');

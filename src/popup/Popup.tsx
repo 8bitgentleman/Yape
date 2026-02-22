@@ -4,7 +4,6 @@ import { debounce } from '../common/utils/debounce';
 import { loadState } from '../common/state';
 import { PyloadClient } from '../common/api/client';
 import { DownloadTask, State, TaskStatus } from '../common/types';
-import LoadingSpinner from '../common/components/LoadingSpinner';
 import DownloadList from './components/DownloadList';
 import Header from './components/Header';
 import AddUrlForm from './components/AddUrlForm';
@@ -16,7 +15,7 @@ import { useDownloadManager } from './hooks/useDownloadManager';
  */
 const Popup: React.FC = () => {
   // State
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [showAddUrlForm, setShowAddUrlForm] = useState<boolean>(false);
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [state, setState] = useState<State | null>(null);
@@ -163,26 +162,21 @@ const Popup: React.FC = () => {
             
             // If package was added within the last 5 minutes, show a notification
             if (timeDiff < 5 * 60 * 1000) {
-              chrome.notifications.create('', {
-                type: 'basic',
+              chrome.runtime.sendMessage({
+                type: 'notification',
+                notificationType: 'added',
                 title: 'Download Added',
                 message: `"${storageData.lastAddedPackage.name}" has been added to PyLoad.`,
-                iconUrl: './images/icon_128.png',
-              });
+              }).catch(() => {});
             }
           }
           
           // Will refresh when state is set and useEffect([state]) runs
         }
 
-        // Show content early even if not logged in
-        setLoading(false);
-
         // Auto-refresh is now handled in useDownloadManager hook
       } catch (err) {
         console.error('Popup initialization error:', err);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -258,11 +252,6 @@ const Popup: React.FC = () => {
     
     chrome.tabs.create({ url });
   };
-
-  // Show loading spinner while initializing
-  if (loading) {
-    return <LoadingSpinner text="Loading PyLoad data..." />;
-  }
 
   const handleAddCurrentPage = () => {
     if (currentUrl) {

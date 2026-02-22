@@ -42,7 +42,8 @@ const Settings: React.FC = () => {
             onDownloadAdded: true,
             onDownloadCompleted: true,
             onDownloadFailed: true,
-            onClearCompleted: true, // Added new notification type
+            onClearCompleted: true,
+            onCaptchaWaiting: true,
             soundEnabled: false
           };
 
@@ -220,6 +221,7 @@ const Settings: React.FC = () => {
     onDownloadCompleted: boolean;
     onDownloadFailed: boolean;
     onClearCompleted: boolean;
+    onCaptchaWaiting: boolean;
     soundEnabled: boolean;
   }) => {
     if (!state) return;

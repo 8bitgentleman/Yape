@@ -186,6 +186,7 @@ export interface State {
       onDownloadCompleted: boolean;
       onDownloadFailed: boolean;
       onClearCompleted: boolean;
+      onCaptchaWaiting: boolean;
       soundEnabled: boolean;
     };
   };
