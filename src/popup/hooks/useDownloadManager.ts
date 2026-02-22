@@ -3,6 +3,7 @@ import { PyloadClient } from '../../common/api/client';
 import { DownloadTask, State, TaskStatus } from '../../common/types';
 import { configValueToBoolean } from '../../common/utils/config';
 import { debounce } from '../../common/utils/debounce';
+import { pauseDownload as pauseDownloadAction, resumeDownload as resumeDownloadAction } from './downloadActions';
 
 export function useDownloadManager(state: State | null) {
   // State - start as true so placeholders show immediately instead of empty-state flash
@@ -37,17 +38,15 @@ export function useDownloadManager(state: State | null) {
     });
   }, []);
 
-  // Helper function to compare task arrays by IDs and relevant properties
+  // Helper function to compare task arrays by ID map (order-independent)
   const tasksEqual = (tasks1: DownloadTask[], tasks2: DownloadTask[]): boolean => {
     if (tasks1.length !== tasks2.length) return false;
-    
-    for (let i = 0; i < tasks1.length; i++) {
-      const task1 = tasks1[i];
-      const task2 = tasks2[i];
-      
-      // Compare essential properties that would cause visual changes
-      if (task1.id !== task2.id || 
-          task1.name !== task2.name ||
+
+    const map = new Map(tasks2.map(t => [t.id, t]));
+    for (const task1 of tasks1) {
+      const task2 = map.get(task1.id);
+      if (!task2) return false;
+      if (task1.name !== task2.name ||
           task1.percent !== task2.percent ||
           task1.status !== task2.status ||
           task1.speed !== task2.speed ||
@@ -336,8 +335,7 @@ export function useDownloadManager(state: State | null) {
     if (activeTasks.length > 0) {
       console.log(`[DEBUG] Setting up refresh interval for ${activeTasks.length} active downloads`);
       
-      // Use either the configured refresh interval or 3 seconds, whichever is shorter
-      const refreshRate = Math.min(state.settings.ui.refreshInterval, 3000);
+      const refreshRate = state.settings.ui.refreshInterval;
       
       const interval = setInterval(() => {
         console.log('[DEBUG] Running active downloads refresh interval');
@@ -431,7 +429,7 @@ export function useDownloadManager(state: State | null) {
       }
     },
     setDataLoading,
-    pauseDownload: async () => {}, // Dummy function to not break the interface
-    resumeDownload: async () => {} // Dummy function to not break the interface
+    pauseDownload: (id: string) => pauseDownloadAction(id, state, setDataLoading, setActiveTasks, refreshDataImmediate),
+    resumeDownload: (id: string) => resumeDownloadAction(id, state, setDataLoading, setActiveTasks, refreshDataImmediate)
   };
 }

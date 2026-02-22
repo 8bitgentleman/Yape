@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from 'react';
 import { PyloadClient } from '../../common/api/client';
 import { DownloadTask, State, TaskStatus } from '../../common/types';
 
@@ -8,7 +9,7 @@ export const pauseDownload = async (
   id: string,
   state: State | null,
   setDataLoading: (loading: boolean) => void,
-  setActiveTasks: React.Dispatch<React.SetStateAction<DownloadTask[]>>,
+  setActiveTasks: Dispatch<SetStateAction<DownloadTask[]>>,
   refreshDataImmediate: () => Promise<void>
 ) => {
   if (!state) return;
@@ -46,7 +47,7 @@ export const resumeDownload = async (
   id: string,
   state: State | null,
   setDataLoading: (loading: boolean) => void,
-  setActiveTasks: React.Dispatch<React.SetStateAction<DownloadTask[]>>,
+  setActiveTasks: Dispatch<SetStateAction<DownloadTask[]>>,
   refreshDataImmediate: () => Promise<void>
 ) => {
   if (!state) return;
