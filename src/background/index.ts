@@ -603,85 +603,29 @@ function updateBadge(count: number | undefined) {
 // Initialize context menus
 function initializeContextMenus() {
   console.log('[YAPE-DEBUG] Initializing context menus');
-  
-  // First, remove any existing context menus to prevent duplicates
-  try {
-    chrome.contextMenus.removeAll(() => {
-      console.log('[YAPE-DEBUG] Cleared existing context menus');
-      
-      // Create the context menu after clearing existing ones
-      try {
-        chrome.contextMenus.create({
-          id: 'yape',
-          title: 'Download with Yape',
-          contexts: ['link']
-        }, () => {
-          if (chrome.runtime.lastError) {
-            console.error('[YAPE-DEBUG] Error creating context menu:', chrome.runtime.lastError);
-            
-            // Try again with a timeout - works around potential timing issues
-            setTimeout(() => {
-              try {
-                chrome.contextMenus.create({
-                  id: 'yape',
-                  title: 'Download with Yape',
-                  contexts: ['link']
-                }, () => {
-                  if (chrome.runtime.lastError) {
-                    console.error('[YAPE-DEBUG] Second attempt failed:', chrome.runtime.lastError);
-                  } else {
-                    console.log('[YAPE-DEBUG] Context menu created successfully on second attempt');
-                  }
-                });
-              } catch (secondError) {
-                console.error('[YAPE-DEBUG] Error in second attempt:', secondError);
-              }
-            }, 1000);
-          } else {
-            console.log('[YAPE-DEBUG] Context menu created successfully');
-          }
-        });
-      } catch (error) {
-        console.error('[YAPE-DEBUG] Error creating context menu:', error);
-        
-        // Try again with a timeout as a fallback
-        setTimeout(() => {
-          try {
-            chrome.contextMenus.create({
-              id: 'yape',
-              title: 'Download with Yape',
-              contexts: ['link']
-            });
-            console.log('[YAPE-DEBUG] Context menu created via fallback');
-          } catch (fallbackError) {
-            console.error('[YAPE-DEBUG] Fallback creation also failed:', fallbackError);
-          }
-        }, 1500);
+
+  chrome.contextMenus.removeAll(() => {
+    if (chrome.runtime.lastError) {
+      console.error('[YAPE-DEBUG] Error clearing context menus:', chrome.runtime.lastError.message);
+    }
+
+    chrome.contextMenus.create({
+      id: 'yape',
+      title: 'Download with Yape',
+      contexts: ['link']
+    }, () => {
+      if (chrome.runtime.lastError) {
+        // Duplicate ID means another init already created it — not an error
+        if (chrome.runtime.lastError.message?.includes('duplicate id')) {
+          console.log('[YAPE-DEBUG] Context menu already exists, skipping');
+        } else {
+          console.error('[YAPE-DEBUG] Error creating context menu:', chrome.runtime.lastError.message);
+        }
+      } else {
+        console.log('[YAPE-DEBUG] Context menu created successfully');
       }
     });
-  } catch (error) {
-    console.error('[YAPE-DEBUG] Error clearing context menus:', error);
-    
-    // Attempt to create the menu even if clearing failed
-    setTimeout(() => {
-      try {
-        chrome.contextMenus.create({
-          id: 'yape',
-          title: 'Download with Yape',
-          contexts: ['link']
-        });
-        console.log('[YAPE-DEBUG] Created context menu without clearing');
-      } catch (createError) {
-        console.error('[YAPE-DEBUG] Failed to create context menu:', createError);
-      }
-    }, 500);
-  }
-
-  // NOTE: The context menu click listener is now registered at the TOP LEVEL of this module
-  // to ensure it's available immediately when the service worker wakes up from dormancy.
-  // See the chrome.contextMenus.onClicked.addListener near the top of the file.
-
-  console.log('[YAPE-DEBUG] Context menu initialization completed');
+  });
 }
 
 // Handle context menu clicks
