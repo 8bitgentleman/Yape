@@ -30,8 +30,10 @@ const AddUrlForm: React.FC<AddUrlFormProps> = ({
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim()) {
-      onAddDownload(url.trim(), selectedPath === 'default location' ? '' : selectedPath);
+    const urls = url.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+    if (urls.length > 0) {
+      const path = selectedPath === 'default location' ? '' : selectedPath;
+      urls.forEach(u => onAddDownload(u, path));
     }
   };
   
