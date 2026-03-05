@@ -154,6 +154,10 @@ body {
     font-weight: $font-weight-bold;
     margin-bottom: $spacing-xs;
     font-size: 0.8rem;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none; // Firefox
+    &::-webkit-scrollbar { display: none; } // Chrome/Safari
   }
   
   .download-meta {
@@ -165,6 +169,14 @@ body {
     margin-top: $spacing-xs;
   }
   
+  .download-action-button {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+    margin-left: $spacing-sm;
+    flex-shrink: 0;
+  }
+
   .download-status {
     display: flex;
     align-items: center;
@@ -214,11 +226,11 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 26px; // Reduced from 30px
+  height: 36px;
   border-top: $border-width solid $border-color;
   padding: 0 $spacing-md;
   background-color: lighten($background-color, 5%);
-  font-size: 0.75rem; // Reduced from 0.8rem
+  font-size: 0.8rem;
   color: $secondary-color;
   
   .status-item {

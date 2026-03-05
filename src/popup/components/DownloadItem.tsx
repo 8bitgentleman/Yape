@@ -90,7 +90,7 @@ const DownloadItem: React.FC<DownloadItemProps> = React.memo(({
 
   return (
     <div className="download-item">
-      <div className="download-name ellipsis" title={task.name}>
+      <div className="download-name" title={task.name}>
         {task.name}
       </div>
       
@@ -112,11 +112,10 @@ const DownloadItem: React.FC<DownloadItemProps> = React.memo(({
             {formatSpeed(task.speed)}
           </div>
         )}
-        
+
         {!isCompleted && !isFailed && isPaused && onResume && (
           <button
-            className="icon-button"
-            style={{ width: '24px', height: '24px', fontSize: '0.8rem', marginLeft: '8px' }}
+            className="icon-button download-action-button"
             onClick={() => onResume(task.id)}
             title="Resume download"
           >
@@ -126,8 +125,7 @@ const DownloadItem: React.FC<DownloadItemProps> = React.memo(({
 
         {!isCompleted && !isFailed && !isPaused && onPause && (
           <button
-            className="icon-button"
-            style={{ width: '24px', height: '24px', fontSize: '0.8rem', marginLeft: '8px' }}
+            className="icon-button download-action-button"
             onClick={() => onPause(task.id)}
             title="Pause download"
           >
@@ -137,8 +135,7 @@ const DownloadItem: React.FC<DownloadItemProps> = React.memo(({
 
         {onRemove && (
           <button
-            className="icon-button"
-            style={{ width: '24px', height: '24px', fontSize: '0.8rem', marginLeft: '8px' }}
+            className="icon-button download-action-button"
             onClick={() => onRemove(task.id)}
             title="Remove download"
           >
