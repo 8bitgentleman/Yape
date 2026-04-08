@@ -8,8 +8,7 @@ export const DEFAULT_STATE: State = {
       port: 890,
       protocol: 'http',
       path: '/',
-      username: '',
-      password: ''
+      apiKey: ''
     },
     ui: {
       showCompleted: true,
@@ -38,12 +37,29 @@ export function getHostUrl(settings: ConnectionSettings): string {
 }
 
 /**
+ * Migrate saved state from older schema versions to the current one.
+ * Handles the transition from username/password Basic Auth to API key auth.
+ */
+function migrateState(state: any): State {
+  const connection = state?.settings?.connection ?? {};
+  // If stored state has username/password but no apiKey, preserve other fields
+  // and add an empty apiKey so the user knows they need to enter one.
+  if (!('apiKey' in connection)) {
+    connection.apiKey = '';
+    delete connection.username;
+    delete connection.password;
+  }
+  return state as State;
+}
+
+/**
  * Load the state from storage
  */
 export async function loadState(): Promise<State> {
   try {
     const data = await chrome.storage.local.get('state');
-    return data.state ?? DEFAULT_STATE;
+    if (!data.state) return DEFAULT_STATE;
+    return migrateState(data.state);
   } catch (error) {
     console.error('Failed to load state', error);
     return DEFAULT_STATE;

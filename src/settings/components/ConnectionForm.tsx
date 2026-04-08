@@ -17,7 +17,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 }) => {
   // Form state
   const [settings, setSettings] = useState<ConnectionSettings>(connectionSettings);
-  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showApiKey, setShowApiKey] = useState<boolean>(false);
 
   // Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -123,42 +123,30 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({
 
 
 
-      {/* Username */}
+      {/* API Key */}
       <div className="mb-3">
-        <label htmlFor="username" className="form-label">Username</label>
-        <input
-          type="text"
-          id="username"
-          name="username"
-          className="form-control"
-          value={settings.username}
-          onChange={handleChange}
-          placeholder="PyLoad username"
-          required
-        />
-      </div>
-
-      {/* Password */}
-      <div className="mb-3">
-        <label htmlFor="password" className="form-label">Password</label>
+        <label htmlFor="apiKey" className="form-label">API Key</label>
         <div className="input-group">
           <input
-            type={showPassword ? 'text' : 'password'}
-            id="password"
-            name="password"
+            type={showApiKey ? 'text' : 'password'}
+            id="apiKey"
+            name="apiKey"
             className="form-control"
-            value={settings.password}
+            value={settings.apiKey}
             onChange={handleChange}
-            placeholder="PyLoad password"
+            placeholder="PyLoad API key (e.g. pl_...)"
             required
           />
           <button
             type="button"
             className="btn btn-outline-secondary"
-            onClick={() => setShowPassword(!showPassword)}
+            onClick={() => setShowApiKey(!showApiKey)}
           >
-            <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+            <i className={`fas ${showApiKey ? 'fa-eye-slash' : 'fa-eye'}`}></i>
           </button>
+        </div>
+        <div className="form-text">
+          Generate an API key in PyLoad under Settings &rarr; User &rarr; API Keys.
         </div>
       </div>
 

@@ -15,12 +15,11 @@ export interface RequestOptions {
 
 /**
  * Base PyLoad-NG API client with core request functionality
- * Uses HTTP Basic Auth and JSON request bodies
+ * Uses X-API-Key header authentication
  */
 export class BaseApiClient {
   protected baseUrl: string;
-  protected username: string;
-  protected password: string;
+  protected apiKey: string;
   protected defaultTimeout: number;
 
   /**
@@ -37,17 +36,8 @@ export class BaseApiClient {
       this.baseUrl = this.baseUrl.slice(0, -1);
     }
 
-    this.username = settings.username;
-    this.password = settings.password;
+    this.apiKey = settings.apiKey;
     this.defaultTimeout = defaultTimeout;
-  }
-
-  /**
-   * Get HTTP Basic Auth header value
-   */
-  protected getBasicAuthHeader(): string {
-    const credentials = btoa(`${this.username}:${this.password}`);
-    return `Basic ${credentials}`;
   }
 
   /**
@@ -94,11 +84,11 @@ export class BaseApiClient {
       });
     }
 
-    // Prepare request options with Basic Auth
+    // Prepare request options with API key auth
     const requestInit: RequestInit = {
       method,
       headers: {
-        'Authorization': this.getBasicAuthHeader(),
+        'X-API-Key': this.apiKey,
         'Accept': 'application/json'
       }
     };

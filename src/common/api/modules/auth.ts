@@ -14,40 +14,20 @@ export class AuthApiClient extends BaseApiClient {
   }
 
   /**
-   * Login / validate credentials
-   * GET /api/check_auth?username=X&password=Y
-   * Returns empty object {} if invalid, user data object if valid
+   * Validate the API key by hitting status_server.
+   * Returns 401 with "Invalid API key" if the key is wrong.
    */
   async login(): Promise<ApiResponse<boolean>> {
-    const response = await this.request<object>('check_auth', {
-      username: this.username,
-      password: this.password
-    }, { method: 'GET' });
+    const response = await this.request<object>('status_server', {}, { method: 'GET' });
 
     if (!response.success) {
       return {
         success: false,
-        error: response.error,
-        message: response.message
+        error: response.error ?? 'login-failed',
+        message: response.message ?? 'Invalid API key'
       };
     }
 
-    // check_auth returns empty object {} if credentials are invalid
-    // Returns populated user object if valid
-    const isValid = response.data && Object.keys(response.data).length > 0;
-
-    if (isValid) {
-      return {
-        success: true,
-        data: true
-      };
-    } else {
-      return {
-        success: false,
-        data: false,
-        error: 'login-failed',
-        message: 'Invalid credentials'
-      };
-    }
+    return { success: true, data: true };
   }
 }

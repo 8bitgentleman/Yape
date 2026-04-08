@@ -8,8 +8,7 @@ export interface ConnectionSettings {
   port: number;
   protocol: 'http' | 'https';
   path: string;
-  username: string;
-  password: string;
+  apiKey: string;
 }
 
 // Download task status enum (internal representation)
