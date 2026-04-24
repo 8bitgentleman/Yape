@@ -83,18 +83,6 @@ const DownloadList: React.FC<DownloadListProps> = ({
             onRemove={onRemoveTask}
           />
         ))}
-        
-        {completedTasks.length > 1 && (
-          <div className="text-center mt-3 mb-2">
-            <button
-              className="btn btn-sm btn-outline-secondary"
-              onClick={onClearCompleted}
-              title="Clear all completed downloads"
-            >
-              Clear all completed ({completedTasks.length})
-            </button>
-          </div>
-        )}
       </>
     ) : null, [showCompleted, completedTasks, onRemoveTask, onClearCompleted]);
   
