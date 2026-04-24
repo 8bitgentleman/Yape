@@ -74,17 +74,17 @@ export class QueueApiClient extends BaseApiClient {
    * Add a package for download
    * POST /api/add_package with JSON body {name, links, dest}
    * @param name Package name
-   * @param url URL to download
+   * @param links One or more URLs to include in the package
    */
-  async addPackage(name: string, url: string): Promise<ApiResponse<number>> {
+  async addPackage(name: string, links: string[]): Promise<ApiResponse<number>> {
     const safeName = name.replace(/[^a-z0-9._\-]/gi, '_');
 
-    console.log(`[YAPE-DEBUG] Adding package ${safeName} with URL ${url}`);
+    console.log(`[YAPE-DEBUG] Adding package ${safeName} with ${links.length} link(s)`);
 
     try {
       const response = await this.request<number>('add_package', {
         name: safeName,
-        links: [url],
+        links,
         dest: 1 // 1 = QUEUE
       });
 

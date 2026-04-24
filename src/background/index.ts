@@ -796,7 +796,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
       
       // Add package for download
       console.log('[YAPE-DEBUG] Adding package:', packageName, 'with URL:', info.linkUrl);
-      const addResponse = await client.addPackage(packageName, info.linkUrl);
+      const addResponse = await client.addPackage(packageName, [info.linkUrl]);
       
       if (!addResponse.success) {
         console.error('[YAPE-DEBUG] Failed to add package:', addResponse);

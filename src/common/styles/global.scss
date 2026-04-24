@@ -443,13 +443,177 @@ body {
     border-color: $border-color;
     color: $dark-color;
   }
-  
+
   .modal-header {
     border-bottom-color: $border-color;
   }
-  
+
   .modal-footer {
     border-top-color: $border-color;
+  }
+}
+
+// MEGA folder picker
+.mega-picker {
+  display: flex;
+  flex-direction: column;
+
+  .mega-picker-header {
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $border-color;
+
+    .mega-picker-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: $dark-color;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mega-picker-subtitle {
+      font-size: 0.7rem;
+      color: $secondary-color;
+      margin-top: 2px;
+    }
+  }
+
+  .mega-picker-action-bar {
+    display: flex;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-md;
+    border-bottom: 1px solid $border-color;
+    background-color: lighten($background-color, 3%);
+  }
+
+  .mega-picker-action-btn {
+    background: none;
+    border: none;
+    color: $primary-color;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    cursor: pointer;
+    border-radius: $border-radius;
+
+    &:hover {
+      background-color: rgba($primary-color, 0.1);
+    }
+  }
+
+  .mega-picker-list {
+    overflow-y: auto;
+    max-height: 270px;
+    background-color: $background-color;
+  }
+
+  .mega-picker-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    color: $secondary-color;
+    font-size: 0.75rem;
+  }
+
+  .mega-picker-row {
+    display: flex;
+    align-items: center;
+    padding: 5px 8px;
+    border-bottom: 1px solid lighten($border-color, 3%);
+    font-size: 0.75rem;
+    cursor: pointer;
+
+    &:hover {
+      background-color: lighten($background-color, 4%);
+    }
+
+    &.mega-picker-file-row.selected {
+      background-color: rgba($primary-color, 0.05);
+    }
+  }
+
+  .mega-picker-checkbox-btn {
+    background: none;
+    border: none;
+    padding: 0 6px 0 0;
+    cursor: pointer;
+    color: $secondary-color;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .mega-picker-folder-btn {
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    padding: 0;
+    cursor: pointer;
+    color: $dark-color;
+    min-width: 0;
+  }
+
+  .mega-picker-chevron {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    color: $secondary-color;
+    width: 10px;
+  }
+
+  .mega-picker-file-check {
+    flex-shrink: 0;
+    margin-right: 6px;
+  }
+
+  .mega-picker-item-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: $dark-color;
+    font-size: 0.75rem;
+    font-weight: 500;
+    min-width: 0;
+  }
+
+  .mega-picker-item-meta {
+    flex-shrink: 0;
+    color: $secondary-color;
+    font-size: 0.65rem;
+    margin-left: 6px;
+    white-space: nowrap;
+  }
+
+  .mega-picker-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    border-top: 1px solid $border-color;
+    background-color: lighten($background-color, 3%);
+    gap: $spacing-sm;
+
+    .mega-picker-footer-info {
+      display: flex;
+      flex-direction: column;
+
+      .mega-picker-count {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: $dark-color;
+      }
+
+      .mega-picker-size {
+        font-size: 0.65rem;
+        color: $secondary-color;
+      }
+    }
+
+    .action-buttons {
+      flex-shrink: 0;
+    }
   }
 }
 

@@ -56,8 +56,8 @@ export class PyloadClient {
     return this.queueClient.getQueueData();
   }
 
-  async addPackage(name: string, url: string): Promise<ApiResponse<any>> {
-    return this.queueClient.addPackage(name, url);
+  async addPackage(name: string, links: string[]): Promise<ApiResponse<any>> {
+    return this.queueClient.addPackage(name, links);
   }
 
   async removeTask(id: string): Promise<ApiResponse<boolean>> {

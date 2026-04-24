@@ -38,6 +38,7 @@ const Popup: React.FC = () => {
     removeTask,
     clearCompletedTasks,
     addUrl,
+    addLinks,
     addCurrentPage,
     pauseDownload,
     resumeDownload,
@@ -264,6 +265,11 @@ const Popup: React.FC = () => {
     setShowAddUrlForm(false);
   };
 
+  const handleAddLinks = (links: string[], name?: string) => {
+    addLinks(links, name || 'MEGA Folder Download');
+    setShowAddUrlForm(false);
+  };
+
   return (
     <div className="app-container">
       <Header 
@@ -284,6 +290,7 @@ const Popup: React.FC = () => {
         {showAddUrlForm ? (
           <AddUrlForm
             onAddDownload={handleAddUrl}
+            onAddLinks={handleAddLinks}
             onCancel={() => setShowAddUrlForm(false)}
           />
         ) : (

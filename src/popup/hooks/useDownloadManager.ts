@@ -371,20 +371,15 @@ export function useDownloadManager(state: State | null) {
     clearCompletedTasks,
     addUrl: async (url: string, path?: string) => {
       if (!state) return;
-      
+
       try {
         setDataLoading(true);
-        
-        // Get package name from URL
+
         const packageName = url.split('/').pop() || 'Download';
-        
         const client = new PyloadClient(state.settings.connection);
-        
-        // Use path if provided, otherwise use default
-        const response = await client.addPackage(packageName, url);
-        
+        const response = await client.addPackage(packageName, [url]);
+
         if (response.success) {
-          // Refresh data
           await refreshDataImmediate();
         }
       } catch (err) {
@@ -393,23 +388,35 @@ export function useDownloadManager(state: State | null) {
         setDataLoading(false);
       }
     },
+    addLinks: async (links: string[], name: string) => {
+      if (!state) return;
+
+      try {
+        setDataLoading(true);
+        const client = new PyloadClient(state.settings.connection);
+        const response = await client.addPackage(name, links);
+
+        if (response.success) {
+          await refreshDataImmediate();
+        }
+      } catch (err) {
+        console.error('Failed to add links:', err);
+      } finally {
+        setDataLoading(false);
+      }
+    },
     addCurrentPage: async (url: string) => {
       if (!state) return;
-      
+
       try {
-        // Get tab title to use as package name
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         const title = tabs[0]?.title || 'Download';
-        
+
         const client = new PyloadClient(state.settings.connection);
-        
-        const response = await client.addPackage(title, url);
-        
+        const response = await client.addPackage(title, [url]);
+
         if (response.success) {
-          // Disable download button
           setCanDownloadCurrentPage(false);
-          
-          // Refresh data
           await refreshDataImmediate();
         }
       } catch (err) {
