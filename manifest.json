@@ -1,6 +1,6 @@
 {
   "name": "Yape",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "description": "Extension for PyLoad to easily monitor and add downloads",
   "permissions": [
     "activeTab",

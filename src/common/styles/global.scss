@@ -454,6 +454,12 @@ body {
 }
 
 // MEGA folder picker
+@keyframes mega-marquee {
+  0%, 12%  { transform: translateX(0); }
+  44%, 56% { transform: translateX(var(--marquee-offset)); }
+  88%, 100% { transform: translateX(0); }
+}
+
 .mega-picker {
   display: flex;
   flex-direction: column;
@@ -569,9 +575,7 @@ body {
 
   .mega-picker-item-name {
     flex: 1;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
     color: $dark-color;
     font-size: 0.75rem;
     font-weight: 500;

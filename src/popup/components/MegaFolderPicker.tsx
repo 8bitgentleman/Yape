@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { FolderFile } from '../../common/api/megaFolder';
 import { formatSize } from '../../common/utils/formatSize';
 
@@ -9,6 +9,45 @@ interface TreeNode {
   children: TreeNode[];
   file?: FolderFile;
 }
+
+const MarqueeText: React.FC<{ className?: string; children: string }> = ({ className, children }) => {
+  const outerRef = useRef<HTMLSpanElement>(null);
+  const innerRef = useRef<HTMLSpanElement>(null);
+  const [overflow, setOverflow] = useState(0);
+
+  const handleMouseEnter = useCallback(() => {
+    const outer = outerRef.current;
+    const inner = innerRef.current;
+    if (!outer || !inner) return;
+    const ov = inner.scrollWidth - inner.offsetWidth;
+    if (ov > 0) setOverflow(ov);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => setOverflow(0), []);
+
+  const duration = Math.max(2, overflow / 50);
+
+  return (
+    <span ref={outerRef} className={className} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+      <span
+        ref={innerRef}
+        style={overflow > 0 ? {
+          display: 'inline-block',
+          whiteSpace: 'nowrap',
+          animation: `mega-marquee ${duration}s ease-in-out infinite`,
+          '--marquee-offset': `-${overflow}px`,
+        } as React.CSSProperties : {
+          display: 'block',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {children}
+      </span>
+    </span>
+  );
+};
 
 function buildTree(files: FolderFile[]): TreeNode {
   const root: TreeNode = { id: 'root', name: 'root', isFolder: true, children: [] };
@@ -182,7 +221,7 @@ const MegaFolderPicker: React.FC<Props> = ({ files, loading, folderName, onConfi
           <button className="mega-picker-folder-btn" onClick={() => toggleExpanded(folderPath)}>
             <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'} mega-picker-chevron`} />
             <i className="fas fa-folder text-primary" style={{ margin: '0 4px' }} />
-            <span className="mega-picker-item-name">{node.name}</span>
+            <MarqueeText className="mega-picker-item-name">{node.name}</MarqueeText>
             <span className="mega-picker-item-meta">{count} {count === 1 ? 'file' : 'files'} · {formatSize(size)}</span>
           </button>
         </div>
@@ -199,7 +238,7 @@ const MegaFolderPicker: React.FC<Props> = ({ files, loading, folderName, onConfi
         onClick={() => toggleFile(file.handle)}
       >
         <i className={`${isSelected ? 'far fa-square-check text-primary' : 'far fa-square'} mega-picker-file-check`} />
-        <span className="mega-picker-item-name">{node.name}</span>
+        <MarqueeText className="mega-picker-item-name">{node.name}</MarqueeText>
         <span className="mega-picker-item-meta">{formatSize(file.fileSize)}</span>
       </div>
     );
