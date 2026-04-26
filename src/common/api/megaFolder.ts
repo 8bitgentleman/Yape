@@ -22,7 +22,7 @@ export interface FolderFile {
 
 /** Returns true if the URL is a bare MEGA folder link (no /file/ suffix). */
 export function isMegaFolderLink(url: string): boolean {
-  return /\/folder\/[^#]+#[^/]+$/.test(url.trim());
+  return /\/folder\/[^#]+#[^/]+(\/folder\/[^/]+)*$/.test(url.trim());
 }
 
 interface RawNode {
