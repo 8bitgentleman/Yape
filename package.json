@@ -7,6 +7,7 @@
     "watch": "webpack --watch --config webpack.dev.js",
     "notifier": "terminal-notifier -title 'VSCode' -message 'Build Finished' -sound default -activate 'com.microsoft.VSCode'",
     "build": "rm -rf dist && webpack --config webpack.prod.js && npm run notifier",
+    "build:win": "webpack --config webpack.prod.js",
     "zip": "rm -rf addon.zip && zip -r addon.zip dist -i 'dist/*' -i 'icons/*' -i '_locales/*' -i 'manifest.json'"
   },
   "repository": {
