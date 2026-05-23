@@ -628,8 +628,25 @@ function initializeContextMenus() {
   });
 }
 
+// Dedup map: url -> timestamp of last accepted dispatch
+const recentContextMenuUrls = new Map<string, number>();
+const CONTEXT_MENU_DEDUP_MS = 2000;
+
 // Handle context menu clicks
 async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) {
+  if (info.linkUrl) {
+    const now = Date.now();
+    const last = recentContextMenuUrls.get(info.linkUrl);
+    if (last && now - last < CONTEXT_MENU_DEDUP_MS) {
+      console.log('[YAPE-DEBUG] Duplicate context menu click suppressed for URL:', info.linkUrl);
+      return;
+    }
+    recentContextMenuUrls.set(info.linkUrl, now);
+    // Prune stale entries
+    for (const [url, ts] of recentContextMenuUrls) {
+      if (now - ts > CONTEXT_MENU_DEDUP_MS) recentContextMenuUrls.delete(url);
+    }
+  }
   console.log('[YAPE-DEBUG] Context menu clicked:', info);
   
   try {
