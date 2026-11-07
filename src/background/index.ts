@@ -1,5 +1,6 @@
 import { loadState, updateState } from '../common/state';
 import { PyloadClient } from '../common/api/client';
+import { extractUrlsWithBase64 } from '../common/utils/base64Url';
 import { ApiResponse, ConnectionSettings, DownloadTask, TaskStatus } from '../common/types';
 
 // Single top-level message handler - registered once, handles all message types.
@@ -625,6 +626,17 @@ function initializeContextMenus() {
         console.log('[YAPE-DEBUG] Context menu created successfully');
       }
     });
+
+    // Selected text that is (or encodes, via base64) a download URL
+    chrome.contextMenus.create({
+      id: 'yape-decode',
+      title: 'Decode base64 & download with Yape',
+      contexts: ['selection']
+    }, () => {
+      if (chrome.runtime.lastError && !chrome.runtime.lastError.message?.includes('duplicate id')) {
+        console.error('[YAPE-DEBUG] Error creating decode context menu:', chrome.runtime.lastError.message);
+      }
+    });
   });
 }
 
@@ -634,14 +646,20 @@ const CONTEXT_MENU_DEDUP_MS = 2000;
 
 // Handle context menu clicks
 async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) {
-  if (info.linkUrl) {
+  // Link menu: use the link. Decode menu: use the first URL found in the selected text,
+  // decoding it from base64 if it is not already a plain URL.
+  const targetUrl: string | undefined = info.menuItemId === 'yape-decode'
+    ? extractUrlsWithBase64(info.selectionText || '').urls[0]
+    : info.linkUrl;
+
+  if (targetUrl) {
     const now = Date.now();
-    const last = recentContextMenuUrls.get(info.linkUrl);
+    const last = recentContextMenuUrls.get(targetUrl);
     if (last && now - last < CONTEXT_MENU_DEDUP_MS) {
-      console.log('[YAPE-DEBUG] Duplicate context menu click suppressed for URL:', info.linkUrl);
+      console.log('[YAPE-DEBUG] Duplicate context menu click suppressed for URL:', targetUrl);
       return;
     }
-    recentContextMenuUrls.set(info.linkUrl, now);
+    recentContextMenuUrls.set(targetUrl, now);
     // Prune stale entries
     for (const [url, ts] of recentContextMenuUrls) {
       if (now - ts > CONTEXT_MENU_DEDUP_MS) recentContextMenuUrls.delete(url);
@@ -651,7 +669,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
   
   try {
     // Make sure we have all the required data
-    if (info.menuItemId !== 'yape') {
+    if (info.menuItemId !== 'yape' && info.menuItemId !== 'yape-decode') {
       console.log('[YAPE-DEBUG] Ignoring non-Yape context menu click:', info.menuItemId);
       return;
     }
@@ -704,14 +722,20 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
     }
     
     // Verify we have a URL to download
-    if (!info.linkUrl) {
+    if (!targetUrl) {
       console.error('[YAPE-DEBUG] No link URL provided in context menu info');
-      await showToast(tab.id, 'error', 'No URL found to download');
+      await showToast(
+        tab.id,
+        'error',
+        info.menuItemId === 'yape-decode'
+          ? 'Selected text is not a URL or a base64-encoded URL'
+          : 'No URL found to download'
+      );
       return;
     }
     
     // Log the URL we're trying to download
-    console.log('[YAPE-DEBUG] Attempting to download URL:', info.linkUrl);
+    console.log('[YAPE-DEBUG] Attempting to download URL:', targetUrl);
     
     // Create PyLoad client
     const client = new PyloadClient(state.settings.connection);
@@ -743,7 +767,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
       
       // Check if URL is valid - this step is optional and can be bypassed if it fails
       console.log('[YAPE-DEBUG] Checking if URL is valid...');
-      const checkResponse = await client.checkURL(info.linkUrl);
+      const checkResponse = await client.checkURL(targetUrl);
       
       if (!checkResponse.success) {
         console.warn('[YAPE-DEBUG] URL check failed, but continuing anyway:', checkResponse);
@@ -756,13 +780,13 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
       // Generate a package name from the URL
       let packageName = '';
 
-      console.log('[YAPE-DEBUG] Extracting filename from URL:', info.linkUrl);
+      console.log('[YAPE-DEBUG] Extracting filename from URL:', targetUrl);
       console.log('[YAPE-DEBUG] Selection text:', info.selectionText);
 
       // Always prefer extracting filename from URL, not link text
       // Link text can be misleading like "Download Now" or "Click here"
       try {
-        const url = new URL(info.linkUrl);
+        const url = new URL(targetUrl);
         const pathname = url.pathname;
 
         if (pathname && pathname !== '/') {
@@ -812,8 +836,8 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
       console.log('[YAPE-DEBUG] Cleaned package name:', packageName);
       
       // Add package for download
-      console.log('[YAPE-DEBUG] Adding package:', packageName, 'with URL:', info.linkUrl);
-      const addResponse = await client.addPackage(packageName, [info.linkUrl]);
+      console.log('[YAPE-DEBUG] Adding package:', packageName, 'with URL:', targetUrl);
+      const addResponse = await client.addPackage(packageName, [targetUrl]);
       
       if (!addResponse.success) {
         console.error('[YAPE-DEBUG] Failed to add package:', addResponse);
@@ -850,7 +874,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
           type: 'download_added',
           packageId: packageId,
           packageName: displayName,
-          url: info.linkUrl
+          url: targetUrl
         })
         .then(() => {
           console.log('[YAPE-DEBUG] Successfully notified popup of added download');
@@ -864,7 +888,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
             lastAddedPackage: {
               id: packageId,
               name: displayName,
-              url: info.linkUrl,
+              url: targetUrl,
               timestamp: Date.now()
             }
           });
@@ -877,7 +901,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
           lastAddedPackage: {
             id: packageId,
             name: displayName,
-            url: info.linkUrl,
+            url: targetUrl,
             timestamp: Date.now()
           }
         });
