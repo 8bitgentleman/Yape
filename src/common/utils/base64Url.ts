@@ -18,14 +18,21 @@ const MAX_LAYERS = 2;
 const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
 const BASE64_CHARS = /^[A-Za-z0-9+/_-]+={0,2}$/;
 
-function isHttpUrl(text: string): boolean {
-  if (!/^(https?|ftp):\/\//i.test(text)) return false;
+const DECODED_URL_REGEX = /(?:https?|ftp):\/\/[^\s<>"{}|\\^`[\]]+/gi;
+
+function isValidUrl(text: string): boolean {
   try {
     new URL(text);
     return true;
   } catch {
     return false;
   }
+}
+
+/** All valid http(s)/ftp URLs found anywhere in `text`, de-duplicated, in order. */
+function findUrls(text: string): string[] {
+  const matches: string[] = text.match(DECODED_URL_REGEX) || [];
+  return matches.filter((u, i) => isValidUrl(u) && matches.indexOf(u) === i);
 }
 
 /** Decode one base64 layer (standard or URL-safe alphabet) to a UTF-8 string. */
@@ -59,19 +66,24 @@ function decodeLayer(input: string): string | null {
 }
 
 /**
- * Decode a base64 string (one or two layers) to a URL.
- * Returns null unless the result is a valid http(s)/ftp URL.
+ * Decode a base64 string (one or two layers) and return every http(s)/ftp URL
+ * found in the decoded text. The decoded text may hold several links, or links
+ * mixed with other text (titles, passwords, notes): the text is ignored and
+ * only the URLs are returned. Returns [] when nothing decodes to a URL.
  */
-export function decodeBase64Url(text: string): string | null {
+export function decodeBase64Urls(text: string): string[] {
   let current = text.trim();
   for (let layer = 0; layer < MAX_LAYERS; layer++) {
     const decoded = decodeLayer(current);
-    if (decoded === null) return null;
-    current = decoded.trim();
-    if (isHttpUrl(current)) return current;
+    if (decoded === null) return [];
+    const urls = findUrls(decoded);
+    if (urls.length > 0) return urls;
+    current = decoded.trim(); // maybe another layer of base64
   }
-  return null;
+  return [];
 }
+
+const unique = (urls: string[]) => urls.filter((u, i) => urls.indexOf(u) === i);
 
 /**
  * Extract downloadable URLs from free text.
@@ -84,20 +96,24 @@ export function extractUrlsWithBase64(text: string): { urls: string[]; decoded: 
   if (plain && plain.length > 0) return { urls: plain, decoded: false };
 
   const tokens = text.split(/\s+/).filter(Boolean);
-  const individual = tokens.map((token) => decodeBase64Url(token));
+  const perToken = tokens.map((token) => decodeBase64Urls(token));
 
-  let found: string[];
-  if (individual.every((u) => u !== null)) {
-    // Every token is its own encoded URL
-    found = individual as string[];
-  } else {
-    // Some tokens are not URLs. The text may be one blob wrapped across lines
-    // (a fragment of a blob can itself decode to a bogus URL prefix, so try the
-    // whole thing first), otherwise keep whichever tokens did decode.
-    const joined = tokens.length > 1 ? decodeBase64Url(tokens.join('')) : null;
-    found = joined ? [joined] : (individual.filter((u) => u !== null) as string[]);
-  }
-  found = found.filter((u, i) => found.indexOf(u) === i);
+  // A blob copied from an email or terminal is usually wrapped at a fixed width:
+  // every line the same length, the last one no longer.
+  const looksWrapped =
+    tokens.length > 1 &&
+    tokens.slice(0, -1).every((t) => t.length === tokens[0].length) &&
+    tokens[tokens.length - 1].length <= tokens[0].length;
+  const allDecode = perToken.every((urls) => urls.length > 0);
+
+  // A fragment of a blob can itself decode to a bogus URL prefix, so when the
+  // text may be one wrapped blob, try the whole thing before the pieces.
+  const joined = tokens.length > 1 && (!allDecode || looksWrapped) ? decodeBase64Urls(tokens.join('')) : [];
+  // Two separate blobs glued together decode to "urlAurlB": reject that.
+  const joinedOk = joined.length > 0 && !joined.some((u) => u.indexOf('://') !== u.lastIndexOf('://'));
+
+  let found: string[] = joinedOk ? joined : perToken.flat();
+  found = unique(found);
 
   return { urls: found, decoded: found.length > 0 };
 }

@@ -648,9 +648,10 @@ const CONTEXT_MENU_DEDUP_MS = 2000;
 async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) {
   // Link menu: use the link. Decode menu: use the first URL found in the selected text,
   // decoding it from base64 if it is not already a plain URL.
-  const targetUrl: string | undefined = info.menuItemId === 'yape-decode'
-    ? extractUrlsWithBase64(info.selectionText || '').urls[0]
-    : info.linkUrl;
+  const targetUrls: string[] = info.menuItemId === 'yape-decode'
+    ? extractUrlsWithBase64(info.selectionText || '').urls
+    : (info.linkUrl ? [info.linkUrl] : []);
+  const targetUrl: string | undefined = targetUrls[0];
 
   if (targetUrl) {
     const now = Date.now();
@@ -836,8 +837,12 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
       console.log('[YAPE-DEBUG] Cleaned package name:', packageName);
       
       // Add package for download
-      console.log('[YAPE-DEBUG] Adding package:', packageName, 'with URL:', targetUrl);
-      const addResponse = await client.addPackage(packageName, [targetUrl]);
+      console.log('[YAPE-DEBUG] Adding package:', packageName, 'with URLs:', targetUrls);
+      // A decoded selection can hold several links; they all go into one package
+      if (targetUrls.length > 1) {
+        packageName = `${packageName} (+${targetUrls.length - 1} more)`.substring(0, 100);
+      }
+      const addResponse = await client.addPackage(packageName, targetUrls);
       
       if (!addResponse.success) {
         console.error('[YAPE-DEBUG] Failed to add package:', addResponse);
