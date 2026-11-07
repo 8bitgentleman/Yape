@@ -210,73 +210,16 @@ let captchaNotificationShown = false;
 // Background check interval ID
 let backgroundCheckIntervalId: number | null = null;
 
-// Initialize the extension
-async function initializeExtension() {
-  console.log('[YAPE] Initializing extension...');
-
-  // Setup context menus
-  initializeContextMenus();
-
-  // Load previously stored notification IDs and settings
-  const storedData = await chrome.storage.local.get([
-    'lastNotifiedDownloadIds', 
-    'badgeCount', 
-    'notificationSettings'
-  ]);
-  
-  if (storedData.lastNotifiedDownloadIds) {
-    try {
-      const savedIds = JSON.parse(storedData.lastNotifiedDownloadIds);
-      if (Array.isArray(savedIds)) {
-        lastNotifiedDownloadIds = new Set(savedIds);
-        console.log(`[YAPE] Loaded ${lastNotifiedDownloadIds.size} previously notified download IDs`);
-      }
-    } catch (error) {
-      console.error('[YAPE] Error parsing stored notification IDs:', error);
-    }
-  }
-  
-  // If notification settings don't exist, initialize them
-  if (!storedData.notificationSettings) {
-    console.log('[YAPE] Initializing notification settings in storage');
-    chrome.storage.local.set({
-      notificationSettings: {
-        enabled: true,
-        onDownloadAdded: true,
-        onDownloadCompleted: true,
-        onDownloadFailed: true,
-        onCaptchaWaiting: true,
-        soundEnabled: false
-      }
-    });
-  }
-  
-  // Restore badge if there was a previous count
-  if (storedData.badgeCount && typeof storedData.badgeCount === 'number') {
-    finishedDownloadCount = storedData.badgeCount;
-    updateBadge(finishedDownloadCount);
-    console.log(`[YAPE] Restored badge count to ${finishedDownloadCount}`);
-  }
-
-  // Set up periodic background checks
-  await setupBackgroundChecks();
-
-  console.log('[YAPE] Extension initialization completed');
-}
-
 // Set up periodic background checks for finished downloads
 async function setupBackgroundChecks() {
   console.log('[YAPE-DEBUG] Setting up background checks...');
   
-  // Clear any existing interval
-  if (backgroundCheckIntervalId !== null) {
-    console.log('[YAPE-DEBUG] Clearing existing interval:', backgroundCheckIntervalId);
-    clearInterval(backgroundCheckIntervalId);
-    backgroundCheckIntervalId = null;
-  }
-
-  // Get current state and settings
   const state = await loadState();
+
+  // Clear after the await: a second caller that overlapped this one would otherwise orphan an interval
+  if (backgroundCheckIntervalId !== null) {
+    clearInterval(backgroundCheckIntervalId);
+  }
   
   // Default to 30 seconds if not configured (reduced from 60 seconds for faster updates)
   const checkInterval = state.settings.ui.backgroundCheckInterval || 30000;
@@ -296,32 +239,6 @@ async function setupBackgroundChecks() {
   console.log('[YAPE-DEBUG] Running immediate checks...');
   checkForFinishedDownloads();
   checkForCaptcha();
-  
-  // Set up a periodic sanity check to ensure our interval is still running
-  // and the badge is visible if it should be
-  setInterval(() => {
-    // First check if our background check interval is still running
-    if (backgroundCheckIntervalId === null) {
-      console.log('[YAPE-DEBUG] WARNING: Background check interval was lost, re-initializing...');
-      setupBackgroundChecks();
-    }
-    
-    // Also check if we have a badge count but it's not visible
-    chrome.storage.local.get(['badgeCount'], (result) => {
-      const storedCount = result.badgeCount;
-      if (storedCount && storedCount > 0) {
-        // Check if badge is currently visible
-        chrome.action.getBadgeText({}, (currentText) => {
-          if (!currentText || currentText === '') {
-            console.log(`[YAPE-DEBUG] Badge is not visible but should show ${storedCount}, restoring...`);
-            // Restore badge
-            chrome.action.setBadgeText({ text: storedCount.toString() });
-            chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
-          }
-        });
-      }
-    });
-  }, 60000); // Run sanity check every minute
 }
 
 // Check for finished downloads and update badge/send notifications
@@ -1011,11 +928,8 @@ setInterval(() => {
 // Run an immediate check to verify functionality
 console.log('[YAPE-DEBUG] 🚀 Background script loaded 🚀');
 
-// Initialize extension when installed or started
+// startup() handles initialization on every worker load; this only records first install
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log(`[YAPE-DEBUG] Extension ${details.reason === 'install' ? 'installed' : 'updated'}, initializing...`);
-  initializeExtension();
-  
   // Special setup for extension installation
   if (details.reason === 'install') {
     chrome.storage.local.set({
@@ -1024,26 +938,6 @@ chrome.runtime.onInstalled.addListener((details) => {
     });
     console.log('[YAPE-DEBUG] New installation recorded');
   }
-  
-  // Special handling for upgrade - ensure the context menu is recreated
-  if (details.reason === 'update') {
-    setTimeout(() => {
-      console.log('[YAPE-DEBUG] Ensuring context menu is created after update...');
-      initializeContextMenus();
-    }, 1000);
-  }
-});
-
-// Also run initialization when Chrome starts
-chrome.runtime.onStartup.addListener(() => {
-  console.log('[YAPE-DEBUG] Browser started, initializing extension...');
-  initializeExtension();
-  
-  // Ensure context menu is created
-  setTimeout(() => {
-    console.log('[YAPE-DEBUG] Ensuring context menu is created after startup...');
-    initializeContextMenus();
-  }, 1000);
 });
 
 // Initialization function that runs when the extension loads
@@ -1106,12 +1000,6 @@ async function startup() {
     
     // Set up background checks
     await setupBackgroundChecks();
-
-    // Run an immediate check after a short delay
-    setTimeout(() => {
-      console.log('[YAPE-DEBUG] Running immediate check after startup');
-      checkForFinishedDownloads();
-    }, 3000);
     
     // Log successful initialization
     console.log('[YAPE-DEBUG] Startup completed successfully');

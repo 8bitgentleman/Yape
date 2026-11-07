@@ -134,20 +134,25 @@ export function useDownloadManager(state: State | null) {
         });
         
         // Only update state if tasks have actually changed
-        if (!tasksEqual(active, prevActiveTasksRef.current)) {
+        const activeChanged = !tasksEqual(active, prevActiveTasksRef.current);
+        const completedChanged = !tasksEqual(completed, prevCompletedTasksRef.current);
+
+        if (activeChanged) {
           setActiveTasks(active);
           prevActiveTasksRef.current = active;
         }
         
-        if (!tasksEqual(completed, prevCompletedTasksRef.current)) {
+        if (completedChanged) {
           setCompletedTasks(completed);
           prevCompletedTasksRef.current = completed;
         }
 
         setDownloadSpeed(totalDownloadSpeed);
 
-        // Cache tasks for instant display on next popup open
-        chrome.storage.local.set({ cachedTasks: { active, completed } });
+        // Cache tasks for instant display on next popup open; skip unchanged lists to avoid storage churn
+        if (activeChanged || completedChanged) {
+          chrome.storage.local.set({ cachedTasks: { active, completed } });
+        }
       }
 
       // Get limit speed status
