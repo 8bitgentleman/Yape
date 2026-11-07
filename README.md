@@ -10,7 +10,7 @@ YAPE is a Chrome extension for managing downloads in PyLoad, a free and open-sou
 
 - **Real-time Download Monitoring**: Track download progress, speed, and status in real-time
 - **Quick Download Addition**: Add URLs with a single click from the popup or right-click context menu
-- **Base64 Links**: Paste base64-encoded links (one or two layers) into the popup, or select the text and use "Decode base64 & download with Yape"
+- **Base64 Links**: Paste base64-encoded links (one or two layers) into the popup, or select the text and use "Decode with Yape" (opens the Add form prefilled so you confirm before anything is queued)
 - **Download Management**: Stop, remove, and clear completed downloads
 - **Notifications**: Get browser notifications when downloads complete or fail
 - **Customizable Settings**: Configure connection details, interface behavior, and notification preferences

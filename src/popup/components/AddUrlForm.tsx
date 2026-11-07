@@ -7,10 +7,11 @@ interface AddUrlFormProps {
   onAddDownload: (url: string, path?: string) => void;
   onAddLinks?: (links: string[], name?: string) => void;
   onCancel: () => void;
+  initialText?: string;
 }
 
-const AddUrlForm: React.FC<AddUrlFormProps> = ({ onAddDownload, onAddLinks, onCancel }) => {
-  const [url, setUrl] = useState<string>('');
+const AddUrlForm: React.FC<AddUrlFormProps> = ({ onAddDownload, onAddLinks, onCancel, initialText }) => {
+  const [url, setUrl] = useState<string>(initialText ?? '');
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [ftpUsername, setFtpUsername] = useState<string>('');
   const [ftpPassword, setFtpPassword] = useState<string>('');

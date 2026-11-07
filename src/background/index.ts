@@ -547,7 +547,7 @@ function initializeContextMenus() {
     // Selected text that is (or encodes, via base64) a download URL
     chrome.contextMenus.create({
       id: 'yape-decode',
-      title: 'Decode base64 & download with Yape',
+      title: 'Decode with Yape',
       contexts: ['selection']
     }, () => {
       if (chrome.runtime.lastError && !chrome.runtime.lastError.message?.includes('duplicate id')) {
@@ -563,6 +563,26 @@ const CONTEXT_MENU_DEDUP_MS = 2000;
 
 // Handle context menu clicks
 async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) {
+  // Decoded base64 is never queued blindly: stash the links so the popup opens
+  // its Add form prefilled and the user confirms them.
+  if (info.menuItemId === 'yape-decode') {
+    const decodedUrls = extractUrlsWithBase64(info.selectionText || '').urls;
+    if (decodedUrls.length === 0) {
+      if (tab?.id) await showToast(tab.id, 'error', 'Selected text is not a URL or a base64-encoded URL');
+      return;
+    }
+    await chrome.storage.local.set({ pendingAddText: decodedUrls.join('\n') });
+    chrome.action.setBadgeText({ text: '+' });
+    chrome.action.setBadgeBackgroundColor({ color: '#17a2b8' });
+    try {
+      await chrome.action.openPopup();
+    } catch {
+      // openPopup needs a focused window; the badge tells the user to click the icon
+      if (tab?.id) await showToast(tab.id, 'info', 'Decoded. Click the Yape icon to review and add.');
+    }
+    return;
+  }
+
   // Link menu: use the link. Decode menu: use the first URL found in the selected text,
   // decoding it from base64 if it is not already a plain URL.
   const targetUrls: string[] = info.menuItemId === 'yape-decode'

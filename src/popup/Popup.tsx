@@ -17,6 +17,7 @@ const Popup: React.FC = () => {
   // State
   const [loading, setLoading] = useState<boolean>(false);
   const [showAddUrlForm, setShowAddUrlForm] = useState<boolean>(false);
+  const [pendingAddText, setPendingAddText] = useState<string | undefined>(undefined);
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [state, setState] = useState<State | null>(null);
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
@@ -143,6 +144,15 @@ const Popup: React.FC = () => {
             setCurrentUrl(tabs[0].url);
           }
         });
+
+        // Links decoded from the context menu wait here for the user to review them
+        const pending = await chrome.storage.local.get('pendingAddText');
+        if (pending.pendingAddText) {
+          setPendingAddText(pending.pendingAddText);
+          setShowAddUrlForm(true);
+          await chrome.storage.local.remove('pendingAddText');
+          chrome.action.setBadgeText({ text: '' });
+        }
 
         // Check if there's a pending refresh with details (from background context menu)
         const storageData = await chrome.storage.local.get(['pendingRefresh', 'lastAddedPackage']);
@@ -291,7 +301,8 @@ const Popup: React.FC = () => {
           <AddUrlForm
             onAddDownload={handleAddUrl}
             onAddLinks={handleAddLinks}
-            onCancel={() => setShowAddUrlForm(false)}
+            onCancel={() => { setShowAddUrlForm(false); setPendingAddText(undefined); }}
+            initialText={pendingAddText}
           />
         ) : (
           <DownloadList
